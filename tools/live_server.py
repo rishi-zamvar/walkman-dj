@@ -23,15 +23,20 @@ TOTAL = 3265
 PORT = 8765
 
 
+_last_counts = {"ok": 0, "failed": 0}
+
+
 def db_counts():
     out = {"ok": 0, "failed": 0}
     try:
-        c = sqlite3.connect(DB)
+        c = sqlite3.connect(DB, timeout=3.0)
+        c.execute("PRAGMA busy_timeout=3000")
         out["ok"] = c.execute("SELECT count(*) FROM features WHERE status='ok'").fetchone()[0]
         out["failed"] = c.execute("SELECT count(*) FROM features WHERE status='failed'").fetchone()[0]
         c.close()
+        _last_counts.update(out)          # cache last good read
     except sqlite3.Error:
-        pass
+        return dict(_last_counts)          # serve cached counts if DB is busy
     return out
 
 
