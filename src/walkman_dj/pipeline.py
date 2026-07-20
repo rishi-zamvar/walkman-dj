@@ -78,7 +78,7 @@ def safe_name(name):
 # ---------- analysis worker (top-level for spawn) ----------
 
 def _analyze_worker(task):
-    path, prior, track, folder = task
+    idx, path, prior, track, folder = task
     import signal
     from walkman_dj import live
     wid = os.getpid()
@@ -99,14 +99,14 @@ def _analyze_worker(task):
             on_stage=lambda s: live.set_worker(wid, track, s, folder))
         signal.alarm(0)
         live.worker_idle(wid)
-        return fp, feat
+        return idx, fp, feat
     except Exception as e:  # noqa: BLE001
         try:
             signal.alarm(0)
         except Exception:  # noqa: BLE001
             pass
         live.worker_idle(wid)
-        return None, {"status": "failed", "segments": [], "error": str(e)[:200]}
+        return idx, None, {"status": "failed", "segments": [], "error": str(e)[:200]}
 
 
 def _read_tags(path):
@@ -188,14 +188,18 @@ def run_analysis(db, rules, files, tmp_dir, batch=150, workers=9, log=print):
             live.set_main(phase="analyzing", batch=bi, nbatches=len(batches),
                           workers=workers, done=done_base, total=len(files),
                           batch_size=len(pulled))
-            tasks = [(local, prior_for(rules, f.folder, f.filename),
-                      os.path.splitext(f.filename)[0], f.folder)
-                     for f, local in pulled]
-            results = pool.map(_analyze_worker, tasks)
+            meta = {}  # idx -> (DeviceFile, localpath)
+            tasks = []
+            for idx, (f, local) in enumerate(pulled):
+                meta[idx] = (f, local)
+                tasks.append((idx, local, prior_for(rules, f.folder, f.filename),
+                              os.path.splitext(f.filename)[0], f.folder))
             ok = 0
-            for (f, local), (fp, feat) in zip(pulled, results):
+            # stream results as each track finishes (true per-track progress)
+            for idx, fp, feat in pool.imap_unordered(_analyze_worker, tasks):
+                f, local = meta[idx]
                 if fp is None:
-                    fp = "bad:" + f.path  # still record the failure under a stable id
+                    fp = "bad:" + f.path  # record the failure under a stable id
                 artist, title = _read_tags(local)
                 if not artist:
                     ga, gt = _guess_from_filename(f.filename)
@@ -208,12 +212,16 @@ def run_analysis(db, rules, files, tmp_dir, batch=150, workers=9, log=print):
                     db.save_segments(fp, feat["segments"])
                 if feat.get("status") == "ok":
                     ok += 1
+                    done_base += 1
                     live.push_done(os.path.splitext(f.filename)[0], feat.get("bpm"),
                                    feat.get("camelot"), feat.get("energy"), f.folder)
-            done_base += ok
-            live.set_main(phase="analyzing", batch=bi, nbatches=len(batches),
-                          workers=workers, done=done_base, total=len(files),
-                          batch_size=len(pulled))
+                    live.set_main(phase="analyzing", batch=bi, nbatches=len(batches),
+                                  workers=workers, done=done_base, total=len(files),
+                                  batch_size=len(pulled))
+                try:
+                    os.remove(local)                # free disk as each finishes
+                except OSError:
+                    pass
             for _, local in pulled:
                 try:
                     os.remove(local)

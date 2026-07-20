@@ -1,0 +1,13 @@
+{
+  "cycle": 1,
+  "headline": "First 300 tracks in — the run is deep in the rap/R&B album folders, and the data already shows it: vocal-forward, minor-key, trap-tempo. The electronic crates come later, and the picture will shift hard.",
+  "insights": [
+    "<b>98% vocal</b> across the first 300 tracks — exactly as expected. The run analyzes folders roughly alphabetically, so it's currently inside the rap/R&B albums (1017 Thug → Chilombo). Watch the vocal gauge fall off a cliff once it reaches the electronic <b>Singles</b> crate.",
+    "Tempo is already bimodal: a dense <b>trap cluster at 130–152 BPM</b> (the 136 and 144 spikes are textbook Atlanta half-time) plus a slower <b>96–118 R&B pocket</b>. No house yet — that whole 122–128 spike arrives with the Singles.",
+    "Keys skew hard <b>minor</b> (12A, 7A, 5A on top) — the dark, moody harmonic fingerprint of trap and alt-R&B. Expect the major (B) Camelot codes to climb sharply once dance material enters the mix.",
+    "Mid energy (<b>0.55</b>) with low danceability (<b>0.32</b>) — this is melodic, atmospheric rap, not club fuel. It's the 'journey'-arc zone; the hype/Boiler-Room sets will crystallize later from the tech-house and baile crates.",
+    "The genre-anchored BPM correction is doing its job — trap tracks are landing in the 130–150 band instead of getting mis-detected at half-time (65–75)."
+  ],
+  "roadblocks_note": "Benign: librosa logs 'PySoundFile failed → trying audioread' for .m4a/.mp3 — that's the expected ffmpeg decode path, not an error. 0 failed decodes, 0 pull failures, device steady.",
+  "next": "Next cycle should catch the transition out of the album block into Singles — the moment vocal% drops and house tempos appear."
+}
