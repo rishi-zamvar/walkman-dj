@@ -112,15 +112,23 @@ def structure_of(y, sr, n_seg=5) -> dict:
 
 # ---- Compose ----
 
-def analyze_file(path, prior=(70, 180)) -> dict:
+def analyze_file(path, prior=(70, 180), on_stage=None) -> dict:
+    def stage(s):
+        if on_stage:
+            on_stage(s)
     try:
+        stage("load")
         y, sr = librosa.load(path, sr=22050, mono=True)
         if len(y) < sr * 5:
             return {"status": "failed", "segments": []}
         out = {"status": "ok"}
+        stage("tempo")
         out.update(bpm_of(y, sr, prior))
+        stage("key")
         out.update(key_of(y, sr))
+        stage("energy")
         out.update(energy_timbre_of(y, sr))
+        stage("structure")
         out.update(structure_of(y, sr))
         return out
     except Exception as e:  # noqa: BLE001

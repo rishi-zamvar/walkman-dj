@@ -13,7 +13,7 @@ import traceback
 from collections import defaultdict
 from multiprocessing import Pool
 
-from walkman_dj import device, analyze, rules as rulesmod
+from walkman_dj import device, analyze, rules as rulesmod, live
 from walkman_dj.db import CrateDB
 from walkman_dj.fingerprint import fingerprint_file
 from walkman_dj.microsplit import split_family
@@ -78,12 +78,34 @@ def safe_name(name):
 # ---------- analysis worker (top-level for spawn) ----------
 
 def _analyze_worker(task):
-    path, prior = task
+    path, prior, track, folder = task
+    import signal
+    from walkman_dj import live
+    wid = os.getpid()
+
+    def _timeout(signum, frame):
+        raise TimeoutError("analysis exceeded 120s")
+
     try:
+        live.set_worker(wid, track, "fingerprint", folder)
+        try:
+            signal.signal(signal.SIGALRM, _timeout)
+            signal.alarm(120)                       # hard per-track timeout
+        except (ValueError, AttributeError):
+            pass                                    # not main thread / unsupported
         fp = fingerprint_file(path)
-        feat = analyze.analyze_file(path, prior=prior)
+        feat = analyze.analyze_file(
+            path, prior=prior,
+            on_stage=lambda s: live.set_worker(wid, track, s, folder))
+        signal.alarm(0)
+        live.worker_idle(wid)
         return fp, feat
     except Exception as e:  # noqa: BLE001
+        try:
+            signal.alarm(0)
+        except Exception:  # noqa: BLE001
+            pass
+        live.worker_idle(wid)
         return None, {"status": "failed", "segments": [], "error": str(e)[:200]}
 
 
@@ -134,6 +156,8 @@ def run_analysis(db, rules, files, tmp_dir, batch=150, workers=9, log=print):
     log(f"[analysis] {len(files)} total, {len(files) - len(todo)} already ok, "
         f"{len(todo)} to analyze")
     batches = plan_batches(todo, batch)
+    live.reset()
+    done_base = len(files) - len(todo)
     pool = Pool(workers, maxtasksperchild=40)
     try:
         for bi, group in enumerate(batches, 1):
@@ -143,7 +167,11 @@ def run_analysis(db, rules, files, tmp_dir, batch=150, workers=9, log=print):
             failed_twice = []
             for attempt in (1, 2):
                 still = []
-                for f in retry_queue:
+                for pi, f in enumerate(retry_queue, 1):
+                    live.set_main(phase="pulling", pulling=f.filename,
+                                  folder=f.folder, pull_i=pi, pull_n=len(retry_queue),
+                                  batch=bi, nbatches=len(batches), workers=workers,
+                                  done=done_base, total=len(files))
                     _wait_online(log)
                     try:
                         local = device.pull(f.path, tmp_dir)
@@ -157,7 +185,11 @@ def run_analysis(db, rules, files, tmp_dir, batch=150, workers=9, log=print):
                 retry_queue = still
                 if not retry_queue:
                     break
-            tasks = [(local, prior_for(rules, f.folder, f.filename))
+            live.set_main(phase="analyzing", batch=bi, nbatches=len(batches),
+                          workers=workers, done=done_base, total=len(files),
+                          batch_size=len(pulled))
+            tasks = [(local, prior_for(rules, f.folder, f.filename),
+                      os.path.splitext(f.filename)[0], f.folder)
                      for f, local in pulled]
             results = pool.map(_analyze_worker, tasks)
             ok = 0
@@ -176,6 +208,12 @@ def run_analysis(db, rules, files, tmp_dir, batch=150, workers=9, log=print):
                     db.save_segments(fp, feat["segments"])
                 if feat.get("status") == "ok":
                     ok += 1
+                    live.push_done(os.path.splitext(f.filename)[0], feat.get("bpm"),
+                                   feat.get("camelot"), feat.get("energy"), f.folder)
+            done_base += ok
+            live.set_main(phase="analyzing", batch=bi, nbatches=len(batches),
+                          workers=workers, done=done_base, total=len(files),
+                          batch_size=len(pulled))
             for _, local in pulled:
                 try:
                     os.remove(local)
