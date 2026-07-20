@@ -1,13 +1,13 @@
 {
-  "cycle": 1,
-  "headline": "First 300 tracks in — the run is deep in the rap/R&B album folders, and the data already shows it: vocal-forward, minor-key, trap-tempo. The electronic crates come later, and the picture will shift hard.",
+  "cycle": 2,
+  "headline": "We've crossed out of the rap albums into the electronic Singles crate — house tempos and major keys are climbing on cue — and the analysis surfaced one real data-quality issue with vocal detection.",
   "insights": [
-    "<b>98% vocal</b> across the first 300 tracks — exactly as expected. The run analyzes folders roughly alphabetically, so it's currently inside the rap/R&B albums (1017 Thug → Chilombo). Watch the vocal gauge fall off a cliff once it reaches the electronic <b>Singles</b> crate.",
-    "Tempo is already bimodal: a dense <b>trap cluster at 130–152 BPM</b> (the 136 and 144 spikes are textbook Atlanta half-time) plus a slower <b>96–118 R&B pocket</b>. No house yet — that whole 122–128 spike arrives with the Singles.",
-    "Keys skew hard <b>minor</b> (12A, 7A, 5A on top) — the dark, moody harmonic fingerprint of trap and alt-R&B. Expect the major (B) Camelot codes to climb sharply once dance material enters the mix.",
-    "Mid energy (<b>0.55</b>) with low danceability (<b>0.32</b>) — this is melodic, atmospheric rap, not club fuel. It's the 'journey'-arc zone; the hype/Boiler-Room sets will crystallize later from the tech-house and baile crates.",
-    "The genre-anchored BPM correction is doing its job — trap tracks are landing in the 130–150 band instead of getting mis-detected at half-time (65–75)."
+    "<b>Into the Singles crate.</b> ~103 electronic tracks analyzed and the shift is visible: the <b>120–129 BPM house band now holds 180 tracks</b>, up from essentially zero at cycle 1. Prodigy, Moodymann, DJ Koze, Soft Cell are all in the DB.",
+    "<b>Keys are opening up.</b> Major-key (Camelot <b>B</b>) share has climbed to <b>34%</b> (285 of 827) from the near-total minor of the opening trap block — dance material brings brighter keys, exactly as predicted.",
+    "<b>⚠ The vocal flag is unreliable.</b> It reads <b>92% of the electronic Singles as \"vocal\"</b>, including clear instrumentals (Moodymann – People, Prodigy – Out of Space). The harmonic/percussive heuristic conflates any tonal content with vocals. Impact is contained: the \"don't stack two vocals\" guard becomes inert, so I'll <b>de-weight it in the final sequencing</b> — BPM, key and energy ordering are unaffected.",
+    "<b>Throughput steady at 23.8 tracks/min.</b> 25% done, ETA ~1h40m, tracking to finish around <b>00:40</b>. Just <b>1 decode failure</b> so far (Huncho Jack – \"Eye 2 Eye\", a FLAC) out of 828 = 0.1%.",
+    "Singles energy (0.53) sits just under the album block (0.56) — the crate-dig material so far is groove-driven, not peak-time. Expect energy and the major-key share to keep rising as the run reaches the tech-house, UKG and baile-edit material deeper in the 923-track Singles folder."
   ],
-  "roadblocks_note": "Benign: librosa logs 'PySoundFile failed → trying audioread' for .m4a/.mp3 — that's the expected ffmpeg decode path, not an error. 0 failed decodes, 0 pull failures, device steady.",
-  "next": "Next cycle should catch the transition out of the album block into Singles — the moment vocal% drops and house tempos appear."
+  "roadblocks_note": "Vocal heuristic over-fires (~92–98% everywhere) → flagged for de-weighting in final sequencing; not blocking. 1 decode failure (Huncho Jack 'Eye 2 Eye'). Benign librosa PySoundFile→audioread fallback for m4a/mp3 continues. Device steady, 0 pull failures, 9 workers live.",
+  "next": "Going deeper into Singles: watch the 120–128 house spike and the 130–150 UKG/baile bands swell, and energy + major-key share keep climbing."
 }

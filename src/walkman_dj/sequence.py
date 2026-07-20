@@ -2,10 +2,13 @@
 import numpy as np
 from walkman_dj.camelot import compatible
 
+# NOTE: vocal weight kept low — the is_vocal detector over-fires (~92-98% of
+# tracks read as vocal, including instrumentals), so it's an unreliable
+# discriminator. BPM / key / energy carry the sequencing.
 _WEIGHTS = {
-    "hype":    {"arc": 0.2, "bpm": 0.4, "key": 0.3, "vocal": 0.3},
-    "soul":    {"arc": 0.3, "bpm": 0.2, "key": 0.4, "vocal": 0.4},
-    "journey": {"arc": 0.3, "bpm": 0.3, "key": 0.3, "vocal": 0.3},
+    "hype":    {"arc": 0.25, "bpm": 0.40, "key": 0.30, "vocal": 0.05},
+    "soul":    {"arc": 0.35, "bpm": 0.20, "key": 0.40, "vocal": 0.05},
+    "journey": {"arc": 0.35, "bpm": 0.30, "key": 0.30, "vocal": 0.05},
 }
 
 
