@@ -9,3 +9,12 @@ audio_tmp/
 *.log
 .DS_Store
 fixtures_audio/
+# generated build outputs / runtime state
+data/playlists/
+data/assignment.csv
+data/insights.json
+data/last_check.json
+data/live/
+data/server.log
+data/run.log
+REPORT.md
