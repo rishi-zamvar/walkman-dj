@@ -71,6 +71,34 @@ def pretty(family):
     return DISPLAY.get(family, family.replace("_", " ").title())
 
 
+# BPM-band sub-crates OFF by default — the user wants ~20-25 total playlists,
+# not 100+. The vibe sets (with micro-splits) are the deliverable.
+MAKE_BAND_CRATES = False
+BAND_FAMILIES = {"tech_house", "organic_house", "nu_disco", "ukg_bass",
+                 "baile_edits", "jersey_juke", "electro_classics",
+                 "global_downtempo", "atlanta_trap", "opium_rage", "afrobeats"}
+
+
+def fallback_family(t):
+    """Route an otherwise-unclassified track into an electronic family by tempo/energy.
+    Keeps the eclectic Singles out of one giant 'Misc' blob."""
+    bpm = t.get("bpm") or 0
+    e = t.get("energy") or 0.5
+    if bpm >= 158:
+        return "jersey_juke"          # juke / footwork / jungle range
+    if bpm >= 143:
+        return "ukg_bass"             # UK garage / bass
+    if bpm >= 132:
+        return "baile_edits"          # baile / hard edits
+    if bpm >= 126:
+        return "tech_house"
+    if bpm >= 120:
+        return "organic_house" if e < 0.52 else "tech_house"
+    if bpm >= 110:
+        return "nu_disco"
+    return "global_downtempo"         # downtempo / world / slow
+
+
 def safe_name(name):
     return "".join(c if c.isalnum() or c in " -&" else "_" for c in name).strip()
 
@@ -251,7 +279,7 @@ def build_playlists(db, rules, dry_run, playlists_dir, log=print):
             rules, folder=t["folder"], filename=t["filename"],
             artist=t["artist"], features=t)
         if not fams:
-            fams = ["misc"]
+            fams = [fallback_family(t)]
         assignment_rows.append((t["fingerprint"], t["path"], "|".join(fams)))
         for fam in fams:
             fam_members[fam].append(t)
@@ -267,15 +295,18 @@ def build_playlists(db, rules, dry_run, playlists_dir, log=print):
     summary = []
     all_playlists = dict(final_groups)
 
-    # 3b. BPM-band crates per top-level family (>=8 tracks in a band)
-    for fam, members in list(fam_members.items()):
-        bands = defaultdict(list)
-        for t in members:
-            if t.get("bpm"):
-                bands[bpm_band(t["bpm"])].append(t)
-        for band, bt in bands.items():
-            if len(bt) >= 8:
-                all_playlists[f"{fam}::band::{band}"] = bt
+    # 3b. BPM-band crates — disabled by default (keeps total ~20-25 playlists)
+    if MAKE_BAND_CRATES:
+        for fam, members in list(fam_members.items()):
+            if fam not in BAND_FAMILIES:
+                continue
+            bands = defaultdict(list)
+            for t in members:
+                if t.get("bpm"):
+                    bands[bpm_band(t["bpm"])].append(t)
+            for band, bt in bands.items():
+                if len(bt) >= 15:
+                    all_playlists[f"{fam}::band::{band}"] = bt
 
     for key, members in sorted(all_playlists.items(), key=lambda kv: -len(kv[1])):
         if len(members) < 4:

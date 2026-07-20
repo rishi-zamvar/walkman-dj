@@ -78,9 +78,11 @@ artist_keywords = ["Keinemusik","&ME","Rampa","Adam Port","Francis Mercier","Mob
 bpm_prior = [118, 124]
 
 [families.nu_disco]
+folders = ["99.9% (2016)","BUBBA (2019)","KAYTRAMINÉ","TIMELESS (2024)",
+  "Ain’t No Damn Way! (2025)"]
 artist_keywords = ["Crazy P","Coeo","Romare","Groove Armada","Moodymann","Bucketheads",
-  "Whirlpool","Purple Disco","Folamour","Kraak & Smaak"]
-bpm_prior = [118, 125]
+  "Whirlpool","Purple Disco","Folamour","Kraak & Smaak","KAYTRANADA","Kaytra","Aminé"]
+bpm_prior = [100, 125]
 
 [families.ukg_bass]
 artist_keywords = ["Sammy Virji","Interplanetary Criminal","MPH","Chris Lorenzo",
