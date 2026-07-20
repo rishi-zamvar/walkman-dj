@@ -35,6 +35,25 @@ def db_counts():
     return out
 
 
+def logfile_rate():
+    """Honest end-to-end rate from completed batch durations (includes pull)."""
+    try:
+        import re
+        tracks = secs = 0
+        lines = open(LOG, encoding="utf-8", errors="replace").read().splitlines()
+        batchlines = [l for l in lines if re.search(r"\[batch \d+/\d+\]", l)][-5:]
+        for l in batchlines:
+            m = re.search(r"pulled (\d+),.*?(\d+)s\s+\(", l)
+            if m:
+                tracks += int(m.group(1))
+                secs += int(m.group(2))
+        if tracks and secs:
+            return round(tracks / secs * 60, 1)
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
 def build_status():
     st = live.read_state()
     counts = db_counts()
@@ -65,7 +84,8 @@ def build_status():
     else:
         hb = ("starting", "Starting up")
 
-    rate = st.get("rate")
+    # prefer honest log-based rate (includes device-pull time); fall back to live
+    rate = logfile_rate() or st.get("rate")
     remaining = max(0, total - analyzed)
     eta = None
     if rate:

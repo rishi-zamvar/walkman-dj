@@ -98,12 +98,15 @@ def read_state(active_window=25):
     try:
         lines = open(os.path.join(LIVE_DIR, "completed.ndjson"),
                      encoding="utf-8").read().splitlines()
-        recent = [json.loads(x) for x in lines[-60:]]
-        state["completed"] = list(reversed(recent[-15:]))
-        if len(recent) >= 2:
-            span = recent[-1]["ts"] - recent[0]["ts"]
+        recent = [json.loads(x) for x in lines[-15:]]
+        state["completed"] = list(reversed(recent))
+        # Honest wall-clock rate: span a wide window so it includes the
+        # device-pull gaps between analyze bursts, not just a single burst.
+        window = [json.loads(x) for x in lines[-500:]]
+        if len(window) >= 2:
+            span = window[-1]["ts"] - window[0]["ts"]
             if span > 0:
-                state["rate"] = round((len(recent) - 1) / (span / 60), 1)
+                state["rate"] = round((len(window) - 1) / (span / 60), 1)
     except Exception:  # noqa: BLE001
         pass
     return state
