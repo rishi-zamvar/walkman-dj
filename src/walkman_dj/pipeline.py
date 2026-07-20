@@ -29,23 +29,24 @@ DEFAULT_TMP = os.path.join(ROOT, "audio_tmp")
 DEFAULT_PLDIR = os.path.join(ROOT, "data", "playlists")
 
 DISPLAY = {
-    "atlanta_trap": "Atlanta Trap", "opium_rage": "Opium Rage",
-    "opium_rage_rage": "Opium Rage — Hard", "opium_rage_melodic": "Opium Rage — Melodic",
-    "atlanta_trap_rage": "Atlanta Trap — Hard", "atlanta_trap_melodic": "Atlanta Trap — Melodic",
-    "melodic_trap": "Melodic Trap", "melodic_trap_rage": "Melodic Trap — Hard",
-    "melodic_trap_melodic": "Melodic Trap — Soft", "travis_rage": "Travis / Rage",
-    "toronto": "Toronto", "toronto_rage": "Toronto — Uptempo", "toronto_melodic": "Toronto — Late Night",
-    "lyrical_soul": "Lyrical / Soul",
-    "lyrical_soul_rage": "Lyrical / Bars", "lyrical_soul_melodic": "Soul / Mellow",
-    "alt_rnb": "Alt-R&B / Late Night",
-    "alt_rnb_rage": "Alt-R&B — Upbeat", "alt_rnb_melodic": "Alt-R&B — Bedroom",
-    "afrobeats": "Afrobeats", "tech_house": "Tech House",
-    "tech_house_rage": "Tech House — Peak", "tech_house_melodic": "Tech House — Deep",
-    "organic_house": "Organic / Afro House",
-    "nu_disco": "Nu-Disco / Funky", "ukg_bass": "UK Garage / Bass",
-    "global_downtempo": "Global / Downtempo", "jersey_juke": "Jersey / Juke",
-    "electro_classics": "Electro / Classics", "baile_edits": "Baile Edits",
-    "brazilian_funk": "Brazilian Funk",
+    # split sub-families (the 23 that actually ship)
+    "opium_rage_rage": "Opium Den", "opium_rage_melodic": "Vamp Anthems",
+    "atlanta_trap_rage": "Trap Furnace", "atlanta_trap_melodic": "Codeine Dreams",
+    "melodic_trap_rage": "Rockstar Riot", "melodic_trap_melodic": "Cloud Nine",
+    "travis_rage": "Astroworld Rage",
+    "toronto_rage": "6ix Energy", "toronto_melodic": "Midnight 6ix",
+    "lyrical_soul_rage": "Pen Game", "lyrical_soul_melodic": "Sunday Soul",
+    "alt_rnb_rage": "Golden Hour", "alt_rnb_melodic": "Velvet Hours",
+    "tech_house_rage": "Sweat Box", "tech_house_melodic": "Basement Warmup",
+    "afrobeats": "Lagos Nights", "organic_house": "Sunrise Ritual",
+    "nu_disco": "Groove Theory", "ukg_bass": "London Garage",
+    "global_downtempo": "Dusty Passport", "jersey_juke": "Jersey Bounce",
+    "electro_classics": "Robot Disco", "baile_edits": "Favela Bounce",
+    # base families (rarely produced; kept for safety)
+    "atlanta_trap": "Trap Furnace", "opium_rage": "Opium Den",
+    "melodic_trap": "Cloud Nine", "toronto": "Midnight 6ix",
+    "lyrical_soul": "Pen Game", "alt_rnb": "Velvet Hours",
+    "tech_house": "Sweat Box", "brazilian_funk": "Favela Bounce",
 }
 
 
