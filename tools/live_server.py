@@ -62,9 +62,14 @@ def logfile_rate():
 def build_status():
     st = live.read_state()
     counts = db_counts()
-    analyzed = counts["ok"] + counts["failed"]
     main = st.get("main", {})
     total = main.get("total", TOTAL)
+    # a run that writes its own done/total (e.g. the Lake analysis) drives progress;
+    # otherwise fall back to the DB counts (the device pipeline)
+    if main.get("done") is not None and main.get("total"):
+        analyzed = main["done"]
+    else:
+        analyzed = counts["ok"] + counts["failed"]
     workers = st.get("workers", [])
     phase = main.get("phase", "starting")
     now = st["now"]
@@ -77,10 +82,12 @@ def build_status():
     elif phase == "analyzing":
         if workers and newest_worker_age <= 15:
             hb = ("live", f"Working — {len(workers)} workers active")
+        elif main_age <= 45:                       # main.json still ticking = working
+            hb = ("live", f"Working — {analyzed}/{total}")
         elif newest_worker_age <= 30:
             hb = ("live", "Working")
         else:
-            hb = ("stall", f"No worker update for {int(newest_worker_age)}s — possible stall")
+            hb = ("stall", f"No update for {int(min(newest_worker_age, main_age))}s — possible stall")
     elif phase == "pulling":
         if main_age <= 40:
             hb = ("pulling", "Streaming files off the device")

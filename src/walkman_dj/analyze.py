@@ -118,7 +118,9 @@ def analyze_file(path, prior=(70, 180), on_stage=None) -> dict:
             on_stage(s)
     try:
         stage("load")
-        y, sr = librosa.load(path, sr=22050, mono=True)
+        # Hard load cap: never pull more than ~11 min into memory (a long DJ-set
+        # recording would otherwise OOM the machine). Real songs are well under this.
+        y, sr = librosa.load(path, sr=22050, mono=True, duration=660)
         if len(y) < sr * 5:
             return {"status": "failed", "segments": []}
         out = {"status": "ok"}

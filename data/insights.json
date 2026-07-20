@@ -1,13 +1,12 @@
 {
-  "cycle": 6,
-  "headline": "Complete — 3,260 tracks analyzed and 124 harmonically-sequenced playlists built and pushed to the Walkman (after recovering from a playlist-build crash).",
+  "cycle": 7,
+  "headline": "Analyzing the Music Lake — reusing 3,324 already-analyzed tracks and processing only the ~1,182 new Mac-only songs, then building 50-60 song DJ sets with energy arcs.",
   "insights": [
-    "<b>Analysis done: 3,260 tracks</b> with BPM, Camelot key, energy, structure and timbre — only <b>3 decode failures</b> (0.09%) across the entire 71 GB library. Device stayed rock-solid the whole ~2.5 hours.",
-    "<b>124 playlists built</b> — 22 micro-genre vibe sets + 102 BPM-band crates — all sequenced by energy arc + Camelot harmonic mixing. Arc split is healthy: <b>38 hype · 51 journey · 35 soul</b>.",
-    "<b>The micro-split works now.</b> Atlanta Trap → Hard (238, hype) vs Melodic (268, soul); Opium Rage → Hard (215, hype) vs Melodic (38); Toronto → Uptempo (97, hype) vs Late Night (237, soul) — the energy-driven scene carving the library asked for.",
-    "<b>Final shape of the collection:</b> house-forward (829 tracks at 120–129 BPM vs 496 trap), 34% major-key, median energy 0.54 — a groove-first crate with a hard trap/rage wing. Opium Rage is the single most energetic family (median 0.72).",
-    "<b>Recovered from two real bugs mid-flight:</b> a live-server hang under DB write-locks (fixed with WAL) and a playlist-build crash on the BPM-band naming (fixed + rebuilt from the DB in ~90s, no re-analysis needed). The unreliable vocal detector was de-weighted so it didn't corrupt sequencing."
+    "<b>Smart reuse:</b> 3,324 tracks already analyzed from the Walkman run are matched by artist+title and skipped — only the genuinely new Lake songs (The Shaker, DJ Music, extra crates) get processed.",
+    "<b>Next step after analysis:</b> segment the Lake into <b>50-60 song DJ sets</b>, each sequenced to its set-type energy arc — Peak-Time (front-load + peak finish), Warm-Up (rising build), Afterhours (deep + comedown), Sunset (melodic bell curve).",
+    "<b>Hybrid organization:</b> mostly genre-based sets, with a few cross-genre journey sets, all harmonically mixed (Camelot) and pointing at the Lake as <code>.m3u8</code> for rekordbox/Serato.",
+    "The Music Lake is the single source now: ~2,530 unique songs consolidated, duplicates trashed, everything stored once."
   ],
-  "roadblocks_note": "RESOLVED: playlist-build ValueError on '::band::' split (crashed after 6 playlists) — patched and fully rebuilt (124 playlists). Live-server WAL fix holding. OPEN: 'Misc' bucket is large (654 unclassified eclectic Singles); 102 BPM-band crates may be more than wanted — both are granularity decisions to review. ZeeChat completion ping could not send (local dispatch daemon: connection refused). KAYTRANADA 'Intimidated' EP unavailable on Soulseek.",
-  "next": "Fold the 5 downloaded KAYTRANADA albums into the crate via an incremental pass; optionally trim the 102 band crates and split the large Misc/Alt-R&B/Lyrical sets deeper if desired."
+  "roadblocks_note": "Lake analysis runs locally (no device). iCloud-Drive-paced file moves during cleanup are done. Rate/ETA may read blank on this monitor (device-pull timing doesn't apply to the local run).",
+  "next": "Finish analyzing the ~1,182 new songs, then auto-build the DJ sets into ~/Desktop/DJ Sets/."
 }
