@@ -106,11 +106,8 @@ artist_keywords = ["Kraftwerk","Daft Punk","LCD Soundsystem","Soft Cell","Prodig
 bpm_prior = [110, 130]
 
 [families.baile_edits]
-filename_keywords = ["baile","edit","funk remix","funk edit","Lai On Da Track","Y3llO","Klean",
-  "brazilian funk"]
-bpm_prior = [130, 150]
-
-[families.brazilian_funk]
 artist_keywords = ["Furacão 2000","Tati Quebra","MC Fioti","Papatinho","Deekapz","MC GW",
   "Furacao"]
-bpm_prior = [125, 135]
+filename_keywords = ["baile","edit","funk remix","funk edit","Lai On Da Track","Y3llO","Klean",
+  "brazilian funk"]
+bpm_prior = [125, 150]

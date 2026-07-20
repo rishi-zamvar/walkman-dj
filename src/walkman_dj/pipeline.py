@@ -35,8 +35,13 @@ DISPLAY = {
     "melodic_trap": "Melodic Trap", "melodic_trap_rage": "Melodic Trap — Hard",
     "melodic_trap_melodic": "Melodic Trap — Soft", "travis_rage": "Travis / Rage",
     "toronto": "Toronto", "toronto_rage": "Toronto — Uptempo", "toronto_melodic": "Toronto — Late Night",
-    "lyrical_soul": "Lyrical / Soul", "alt_rnb": "Alt-R&B / Late Night",
-    "afrobeats": "Afrobeats", "tech_house": "Tech House", "organic_house": "Organic / Afro House",
+    "lyrical_soul": "Lyrical / Soul",
+    "lyrical_soul_rage": "Lyrical / Bars", "lyrical_soul_melodic": "Soul / Mellow",
+    "alt_rnb": "Alt-R&B / Late Night",
+    "alt_rnb_rage": "Alt-R&B — Upbeat", "alt_rnb_melodic": "Alt-R&B — Bedroom",
+    "afrobeats": "Afrobeats", "tech_house": "Tech House",
+    "tech_house_rage": "Tech House — Peak", "tech_house_melodic": "Tech House — Deep",
+    "organic_house": "Organic / Afro House",
     "nu_disco": "Nu-Disco / Funky", "ukg_bass": "UK Garage / Bass",
     "global_downtempo": "Global / Downtempo", "jersey_juke": "Jersey / Juke",
     "electro_classics": "Electro / Classics", "baile_edits": "Baile Edits",
@@ -309,7 +314,7 @@ def build_playlists(db, rules, dry_run, playlists_dir, log=print):
                     all_playlists[f"{fam}::band::{band}"] = bt
 
     for key, members in sorted(all_playlists.items(), key=lambda kv: -len(kv[1])):
-        if len(members) < 4:
+        if len(members) < 10:          # no playlist smaller than 10 songs
             continue
         energies = [m["energy"] or 0.0 for m in members]
         arc = assign_arc(energies)

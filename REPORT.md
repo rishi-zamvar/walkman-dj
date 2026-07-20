@@ -9,15 +9,15 @@
 |---|---|---|
 | Alt-R&B / Late Night | journey | 473 |
 | Lyrical / Soul | journey | 448 |
-| Tech House | journey | 316 |
+| Tech House | journey | 315 |
 | Atlanta Trap — Melodic | soul | 268 |
-| Global / Downtempo | journey | 253 |
 | Atlanta Trap — Hard | hype | 238 |
 | Toronto — Late Night | soul | 237 |
 | Opium Rage — Hard | hype | 215 |
-| Baile Edits | journey | 188 |
-| Organic / Afro House | soul | 140 |
-| Nu-Disco / Funky | soul | 131 |
+| Global / Downtempo | journey | 213 |
+| Nu-Disco / Funky | soul | 183 |
+| Baile Edits | journey | 182 |
+| Organic / Afro House | soul | 137 |
 | Afrobeats | soul | 125 |
 | Travis / Rage | hype | 116 |
 | Toronto — Uptempo | hype | 97 |
