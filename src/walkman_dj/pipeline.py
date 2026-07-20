@@ -110,6 +110,20 @@ def _guess_from_filename(filename):
 
 # ---------- analysis phase ----------
 
+def _wait_online(log, every=10, max_wait=3600):
+    """Block until the device is reachable (overnight resilience)."""
+    waited = 0
+    while not device.device_online():
+        if waited == 0:
+            log("[device] offline — waiting for it to come back...")
+        time.sleep(every)
+        waited += every
+        if waited >= max_wait:
+            raise RuntimeError(f"device offline > {max_wait}s")
+    if waited:
+        log(f"[device] back online after {waited}s")
+
+
 def run_analysis(db, rules, files, tmp_dir, batch=150, workers=9, log=print):
     os.makedirs(tmp_dir, exist_ok=True)
     # resume: skip files whose path is already ok
@@ -125,12 +139,24 @@ def run_analysis(db, rules, files, tmp_dir, batch=150, workers=9, log=print):
         for bi, group in enumerate(batches, 1):
             t0 = time.time()
             pulled = []  # (DeviceFile, localpath)
-            for f in group:
-                try:
-                    local = device.pull(f.path, tmp_dir)
-                    pulled.append((f, local))
-                except Exception as e:  # noqa: BLE001
-                    log(f"[pull-fail] {f.path}: {e}")
+            retry_queue = list(group)
+            failed_twice = []
+            for attempt in (1, 2):
+                still = []
+                for f in retry_queue:
+                    _wait_online(log)
+                    try:
+                        local = device.pull(f.path, tmp_dir)
+                        pulled.append((f, local))
+                    except Exception as e:  # noqa: BLE001
+                        if attempt == 2:
+                            log(f"[pull-fail] {f.path}: {e}")
+                            failed_twice.append(f)
+                        else:
+                            still.append(f)
+                retry_queue = still
+                if not retry_queue:
+                    break
             tasks = [(local, prior_for(rules, f.folder, f.filename))
                      for f, local in pulled]
             results = pool.map(_analyze_worker, tasks)
