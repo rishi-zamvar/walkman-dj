@@ -1,0 +1,114 @@
+# family -> album folder names (exact) and/or artist/filename keywords + BPM prior.
+
+[families.atlanta_trap]
+folders = ["DS2","Hndrxx","Honest","High Off Life","Mixtape Pluto","Iceman",
+  "Slime Language 2","So Much Fun (Deluxe)","Barter 6","Punk","Slime Season",
+  "Slime Season 2","Slime Season 3","1017 Thug","Beast Mode","Evol","Purple Reign",
+  "Monster","56 Nights","We Don't Trust You","Super Slimey","Beautiful Thugger Girls",
+  "Jeffrey","I'm Up","The Wizrd","Future - The Real Me","UY SCUTI (Bonus Edition)",
+  "Pluto x Baby Pluto","Pluto","Chixtape 5","What a Time to Be Alive","Sorry 4 What"]
+bpm_prior = [130, 150]
+
+[families.opium_rage]
+folders = ["Whole Lotta Red","Die Lit","Playboi Carti","A Great Chaos","More Chaos",
+  "Ken Carson - Teen X","X","Project X","MUSIC - SORRY 4 DA WAIT","If Looks Could Kill",
+  "Ken Carson - The Xperiment","Ken Carson - xperiment"]
+artist_keywords = ["Ken Carson","Destroy Lonely","Homixide","Playboi Carti"]
+bpm_prior = [140, 160]
+
+[families.melodic_trap]
+folders = ["Lil Uzi Vert - Luv Is Rage","Lil Uzi Vert - The Perfect LUV Tape",
+  "Lil Uzi Vert - Lil Uzi Vert vs. The World","Lil Uzi Vert - Eternal Atake 2"]
+artist_keywords = ["Juice WRLD","Trippie Redd"]
+bpm_prior = [140, 160]
+
+[families.travis_rage]
+folders = ["Astroworld","Utopia","Rodeo","Days Before Rodeo","Birds in the Trap Sing McKnight",
+  "JackBoys","JackBoys 2","Huncho Jack Jack Huncho"]
+bpm_prior = [130, 155]
+
+[families.toronto]
+folders = ["Take Care","Views","Scorpion","More Life","Certified Lover Boy",
+  "Nothing Was the Same","If You're Reading This It's Too Late","Her Loss",
+  "Honestly, Nevermind","Dark Lane Demo Tapes","Thank Me Later","So Far Gone",
+  "For All the Dogs","Partymobile","PartyNextDoor","PartyNextDoor Two",
+  "PartyNextDoor 3","PartyNextDoor 4","The New Toronto","The New Toronto 2"]
+bpm_prior = [120, 145]
+
+[families.lyrical_soul]
+folders = ["Late Registration","Graduation","The College Dropout","808s & Heartbreak",
+  "My Beautiful Dark Twisted Fantasy","Yeezus","The Life of Pablo","Donda",
+  "Donda 2 (~21 tracks leak, 2022)","Jesus Is King","Vultures 2","Watch the Throne",
+  "Kids See Ghosts","good kid, m.A.A.d city","Section.80","GNX",
+  "Mr. Morale & The Big Steppers","Kendrick Lamar - To Pimp a Butterfly",
+  "J. Cole - The Warm Up","J. Cole - Friday Night Lights","J. Cole - 2014 Forest Hills Drive",
+  "J. Cole - The Off-Season","J. Cole - KOD","J. Cole - Truly Yours","J. Cole - Truly Yours 2",
+  "Mac Miller - Swimming","Mac Miller - Circles","Mac Miller - GO -OD AM",
+  "Mac Miller - Watching Movies with the Sound Off","Mac Miller - Macadelic",
+  "Mac Miller - The Divine Feminine"]
+bpm_prior = [80, 150]
+
+[families.alt_rnb]
+folders = ["Blonde","Endless","Frank Ocean - Nostalgia, Ultra","SZA - Ctrl","SOS",
+  "SZA - Z","Bryson Tiller","Bryson Tiller - True to Self","Chilombo","Souled Out",
+  "Sail Out","Sonder Son","Into","Take Time","Give or Take","WASTELAND","Larger Than Life",
+  "Lost","A.M. Paradox","Do Not Listen","Fuck The World","Summer Walker - Clear",
+  "Summer Walker - Clear 2 - Soft Life","For Broken Ears","Colours","Beloved",
+  "Maid of Honour","Love Lasts Forever","Habibti","Peterson","Seven Days","Trip",
+  "Don Toliver - Love Sick","Don Toliver - Heaven or Hell","Don Toliver - Donny Womack",
+  "Sail Out","Sailing Soul(s)","Too Late to Die Young"]
+bpm_prior = [70, 110]
+
+[families.afrobeats]
+folders = ["Made in Lagos","More Love Less Ego","Morayo","Ayo","Sounds from the Other Side",
+  "Born in the Wild","No Stylist","I Told You"]
+bpm_prior = [100, 120]
+
+[families.tech_house]
+artist_keywords = ["FISHER","Dom Dolla","John Summit","Chris Lake","Calvin Harris","Meduza",
+  "D.O.D","Sonny Fodera","Cloonee","PAWSA","Michael Bibi","Franky Rizardo","Max Dean",
+  "James Hype","Gorgon City","Matroda","Kettama","Mall Grab","East End Dubs","Chris Stussy",
+  "Dennis Cruz","Cuartero","CamelPhat","Diplo","SIDEPIECE","Martin Ikin","Sammy Virji"]
+bpm_prior = [123, 130]
+
+[families.organic_house]
+artist_keywords = ["Keinemusik","&ME","Rampa","Adam Port","Francis Mercier","Moblack","MoBlack",
+  "Ben Böhmer","Barry Can","Oden & Fatzo","ODEN","Stavroz","Satori","Sahalé",
+  "Sparrow & Barbossa","Maxi Meraki","Nico Morano","Colyn","Damian Lazarus"]
+bpm_prior = [118, 124]
+
+[families.nu_disco]
+artist_keywords = ["Crazy P","Coeo","Romare","Groove Armada","Moodymann","Bucketheads",
+  "Whirlpool","Purple Disco","Folamour","Kraak & Smaak"]
+bpm_prior = [118, 125]
+
+[families.ukg_bass]
+artist_keywords = ["Sammy Virji","Interplanetary Criminal","MPH","Chris Lorenzo",
+  "Smokey Bubblin","Shift K3Y","Salute","Conducta"]
+bpm_prior = [130, 140]
+
+[families.global_downtempo]
+artist_keywords = ["Chinese Man","Guts","Souleance","Sotomayor","Khruangbin",
+  "Meridian Brothers","La Fine Equipe","Mo' Horizons","Quantic","Degiheugi","Mister Modo"]
+bpm_prior = [90, 115]
+
+[families.jersey_juke]
+artist_keywords = ["DJ Swisha","Kush Jones","DJ Rashad","DJ Spinn","DJ Sliink","DJ Assault",
+  "Ziahfyah","Bassboy"]
+filename_keywords = ["jerseyclub"]
+bpm_prior = [140, 160]
+
+[families.electro_classics]
+artist_keywords = ["Kraftwerk","Daft Punk","LCD Soundsystem","Soft Cell","Prodigy","Underworld",
+  "Molchat Doma","Yello","ESG","New Order","Leftfield","Gorillaz","Groove Armada"]
+bpm_prior = [110, 130]
+
+[families.baile_edits]
+filename_keywords = ["baile","edit","funk remix","funk edit","Lai On Da Track","Y3llO","Klean",
+  "brazilian funk"]
+bpm_prior = [130, 150]
+
+[families.brazilian_funk]
+artist_keywords = ["Furacão 2000","Tati Quebra","MC Fioti","Papatinho","Deekapz","MC GW",
+  "Furacao"]
+bpm_prior = [125, 135]
