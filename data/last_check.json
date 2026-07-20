@@ -1,1 +1,1 @@
-{"ok": 2858, "ts": 1784521652, "verdict": "PROGRESSING — 88%, both procs healthy, rate 21.6/min, 3 benign failures; rap tail rebalancing trap up, house still leads. WAL fix holding. ~15m to completion."}
+{"ok": 3260, "ts": 1784523434, "verdict": "COMPLETE — 3260 analyzed (3 failed), 124 playlists built + pushed after recovering playlist-build crash. Health cron stopping."}

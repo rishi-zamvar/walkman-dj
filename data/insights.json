@@ -1,14 +1,13 @@
 {
-  "cycle": 5,
-  "headline": "88% done and in the final stretch — the closing rap albums are rebalancing the chart, pulling trap tempos and vocals back up, though house keeps its overall lead.",
+  "cycle": 6,
+  "headline": "Complete — 3,260 tracks analyzed and 124 harmonically-sequenced playlists built and pushed to the Walkman (after recovering from a playlist-build crash).",
   "insights": [
-    "<b>88% (2,858 tracks), ~15m to go.</b> The run is into the last alphabetical stretch — Vultures 2, Whole Lotta Red, Yeezus, We Don't Trust You — the pure-rap tail of the library.",
-    "<b>Trap is fighting back.</b> The 130–150 BPM range grew from 352 → <b>496 tracks</b> as the rap albums landed, and 136/143 BPM re-entered the top-four tempo spikes. House still leads (829 vs 496) but the gap narrowed from 2:1 toward ~1.7:1.",
-    "<b>Vocal share ticked back up</b> 0.956 → <b>0.962</b> — the rap closers are re-weighting the (over-firing) vocal metric upward after the instrumental-house dip. Predictable and consistent.",
-    "<b>Aggregate character barely moved</b> across the last 600 tracks: energy 0.54, danceability 0.34, major-key share <b>34%</b> (979 of 2,867). Both halves of the library — album and Singles — are now fully and evenly represented.",
-    "<b>Throughput eased to 21.6/min</b> — the big closing FLAC albums are heavier to decode — ETA ~15m. Just <b>3 decode failures in 2,861</b> (0.10%): Huncho Jack 'Eye 2 Eye', Max Dean 'Gets Like That', Thank Me Later 'The Resistance'.",
-    "The dashboard-hang bug is fixed (WAL mode) and holding — polls back to ~0.07s. On completion the pipeline auto-classifies, arc-sequences, pushes all playlists to the device, and pings."
+    "<b>Analysis done: 3,260 tracks</b> with BPM, Camelot key, energy, structure and timbre — only <b>3 decode failures</b> (0.09%) across the entire 71 GB library. Device stayed rock-solid the whole ~2.5 hours.",
+    "<b>124 playlists built</b> — 22 micro-genre vibe sets + 102 BPM-band crates — all sequenced by energy arc + Camelot harmonic mixing. Arc split is healthy: <b>38 hype · 51 journey · 35 soul</b>.",
+    "<b>The micro-split works now.</b> Atlanta Trap → Hard (238, hype) vs Melodic (268, soul); Opium Rage → Hard (215, hype) vs Melodic (38); Toronto → Uptempo (97, hype) vs Late Night (237, soul) — the energy-driven scene carving the library asked for.",
+    "<b>Final shape of the collection:</b> house-forward (829 tracks at 120–129 BPM vs 496 trap), 34% major-key, median energy 0.54 — a groove-first crate with a hard trap/rage wing. Opium Rage is the single most energetic family (median 0.72).",
+    "<b>Recovered from two real bugs mid-flight:</b> a live-server hang under DB write-locks (fixed with WAL) and a playlist-build crash on the BPM-band naming (fixed + rebuilt from the DB in ~90s, no re-analysis needed). The unreliable vocal detector was de-weighted so it didn't corrupt sequencing."
   ],
-  "roadblocks_note": "3 benign decode failures (2 FLAC, 1 Singles); vocal heuristic over-fires (~96%, de-weighted); Xing MP3-header warnings benign; live-server WAL fix holding (was hanging on DB write locks, now ~0.07s). KAYTRANADA 'Intimidated' EP unavailable on Soulseek (0 seeders on two queries). Device + both processes healthy.",
-  "next": "Final 3 batches (~450 tracks), then auto playlist build + push to device + ZeeChat. After that: fold the 5 downloaded KAYTRANADA albums into the crate via an incremental analysis pass."
+  "roadblocks_note": "RESOLVED: playlist-build ValueError on '::band::' split (crashed after 6 playlists) — patched and fully rebuilt (124 playlists). Live-server WAL fix holding. OPEN: 'Misc' bucket is large (654 unclassified eclectic Singles); 102 BPM-band crates may be more than wanted — both are granularity decisions to review. ZeeChat completion ping could not send (local dispatch daemon: connection refused). KAYTRANADA 'Intimidated' EP unavailable on Soulseek.",
+  "next": "Fold the 5 downloaded KAYTRANADA albums into the crate via an incremental pass; optionally trim the 102 band crates and split the large Misc/Alt-R&B/Lyrical sets deeper if desired."
 }
