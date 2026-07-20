@@ -13,10 +13,12 @@ _WEIGHTS = {
 
 
 def assign_arc(energies) -> str:
+    # Calibrated to the real distribution: RMS energy clusters ~0.47-0.72 across
+    # families, so 0.7/0.4 never triggered. Tertile-ish split on measured energy.
     m = float(np.median(list(energies)))
-    if m >= 0.7:
+    if m >= 0.55:
         return "hype"
-    if m <= 0.4:
+    if m <= 0.50:
         return "soul"
     return "journey"
 

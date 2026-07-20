@@ -1,13 +1,14 @@
 {
-  "cycle": 2,
-  "headline": "We've crossed out of the rap albums into the electronic Singles crate — house tempos and major keys are climbing on cue — and the analysis surfaced one real data-quality issue with vocal detection.",
+  "cycle": 5,
+  "headline": "88% done and in the final stretch — the closing rap albums are rebalancing the chart, pulling trap tempos and vocals back up, though house keeps its overall lead.",
   "insights": [
-    "<b>Into the Singles crate.</b> ~103 electronic tracks analyzed and the shift is visible: the <b>120–129 BPM house band now holds 180 tracks</b>, up from essentially zero at cycle 1. Prodigy, Moodymann, DJ Koze, Soft Cell are all in the DB.",
-    "<b>Keys are opening up.</b> Major-key (Camelot <b>B</b>) share has climbed to <b>34%</b> (285 of 827) from the near-total minor of the opening trap block — dance material brings brighter keys, exactly as predicted.",
-    "<b>⚠ The vocal flag is unreliable.</b> It reads <b>92% of the electronic Singles as \"vocal\"</b>, including clear instrumentals (Moodymann – People, Prodigy – Out of Space). The harmonic/percussive heuristic conflates any tonal content with vocals. Impact is contained: the \"don't stack two vocals\" guard becomes inert, so I'll <b>de-weight it in the final sequencing</b> — BPM, key and energy ordering are unaffected.",
-    "<b>Throughput steady at 23.8 tracks/min.</b> 25% done, ETA ~1h40m, tracking to finish around <b>00:40</b>. Just <b>1 decode failure</b> so far (Huncho Jack – \"Eye 2 Eye\", a FLAC) out of 828 = 0.1%.",
-    "Singles energy (0.53) sits just under the album block (0.56) — the crate-dig material so far is groove-driven, not peak-time. Expect energy and the major-key share to keep rising as the run reaches the tech-house, UKG and baile-edit material deeper in the 923-track Singles folder."
+    "<b>88% (2,858 tracks), ~15m to go.</b> The run is into the last alphabetical stretch — Vultures 2, Whole Lotta Red, Yeezus, We Don't Trust You — the pure-rap tail of the library.",
+    "<b>Trap is fighting back.</b> The 130–150 BPM range grew from 352 → <b>496 tracks</b> as the rap albums landed, and 136/143 BPM re-entered the top-four tempo spikes. House still leads (829 vs 496) but the gap narrowed from 2:1 toward ~1.7:1.",
+    "<b>Vocal share ticked back up</b> 0.956 → <b>0.962</b> — the rap closers are re-weighting the (over-firing) vocal metric upward after the instrumental-house dip. Predictable and consistent.",
+    "<b>Aggregate character barely moved</b> across the last 600 tracks: energy 0.54, danceability 0.34, major-key share <b>34%</b> (979 of 2,867). Both halves of the library — album and Singles — are now fully and evenly represented.",
+    "<b>Throughput eased to 21.6/min</b> — the big closing FLAC albums are heavier to decode — ETA ~15m. Just <b>3 decode failures in 2,861</b> (0.10%): Huncho Jack 'Eye 2 Eye', Max Dean 'Gets Like That', Thank Me Later 'The Resistance'.",
+    "The dashboard-hang bug is fixed (WAL mode) and holding — polls back to ~0.07s. On completion the pipeline auto-classifies, arc-sequences, pushes all playlists to the device, and pings."
   ],
-  "roadblocks_note": "Vocal heuristic over-fires (~92–98% everywhere) → flagged for de-weighting in final sequencing; not blocking. 1 decode failure (Huncho Jack 'Eye 2 Eye'). Benign librosa PySoundFile→audioread fallback for m4a/mp3 continues. Device steady, 0 pull failures, 9 workers live.",
-  "next": "Going deeper into Singles: watch the 120–128 house spike and the 130–150 UKG/baile bands swell, and energy + major-key share keep climbing."
+  "roadblocks_note": "3 benign decode failures (2 FLAC, 1 Singles); vocal heuristic over-fires (~96%, de-weighted); Xing MP3-header warnings benign; live-server WAL fix holding (was hanging on DB write locks, now ~0.07s). KAYTRANADA 'Intimidated' EP unavailable on Soulseek (0 seeders on two queries). Device + both processes healthy.",
+  "next": "Final 3 batches (~450 tracks), then auto playlist build + push to device + ZeeChat. After that: fold the 5 downloaded KAYTRANADA albums into the crate via an incremental analysis pass."
 }

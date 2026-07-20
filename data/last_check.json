@@ -1,1 +1,1 @@
-{"ok": 827, "ts": 1784516230, "verdict": "PROGRESSING — 9 workers live, both processes up, rate 23.8/min, 1 benign decode failure; noted vocal-heuristic over-firing for post-run de-weighting"}
+{"ok": 2858, "ts": 1784521652, "verdict": "PROGRESSING — 88%, both procs healthy, rate 21.6/min, 3 benign failures; rap tail rebalancing trap up, house still leads. WAL fix holding. ~15m to completion."}

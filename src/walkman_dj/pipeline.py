@@ -284,7 +284,7 @@ def build_playlists(db, rules, dry_run, playlists_dir, log=print):
         arc = assign_arc(energies)
         seq = order_playlist(members, arc)
         if "::band::" in key:
-            fam, _, band = key.split("::band::")
+            fam, band = key.split("::band::")
             name = f"{pretty(fam)} {band}bpm"
         else:
             name = pretty(key)
