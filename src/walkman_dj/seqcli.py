@@ -42,20 +42,22 @@ def render_md(ordered, hard, isolated, template):
 
 
 def _load_family_tracks(db_path, family):
-    """Join features + track_genre for one family (status='ok' only)."""
+    """Join features(audio) + tracks(path/title) + track_genre(family), status='ok'."""
     import sqlite3
     from walkman_dj import genre_store
     fams = genre_store.get_all(db_path)
     con = sqlite3.connect(db_path)
     con.row_factory = sqlite3.Row
     rows = []
-    for r in con.execute("SELECT * FROM features WHERE status='ok'"):
+    for r in con.execute(
+            "SELECT f.*, t.path AS path, t.title AS title, t.filename AS filename "
+            "FROM features f JOIN tracks t USING(fingerprint) WHERE f.status='ok'"):
         d = dict(r)
         fp = d["fingerprint"]
         if fams.get(fp, {}).get("family") != family:
             continue
         d["path"] = d.get("path") or fp
-        d["title"] = d.get("title") or fp
+        d["title"] = d.get("title") or d.get("filename") or fp
         rows.append(d)
     con.close()
     return rows
