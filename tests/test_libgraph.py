@@ -38,3 +38,20 @@ def test_graph_no_edge_when_key_clashes():
     tr = [_t("a", 128, "8A", 0.5, "tech house"), _t("b", 129, "3B", 0.5, "tech house")]
     G = build_graph(tr, _cfg())
     assert not G.has_edge("a", "b")
+
+
+def test_hard_genre_scope_drops_cross_family_edges():
+    cfg = _cfg()
+    cfg["genre_scope"] = "hard"
+    tr = [_t("a", 128, "8A", 0.5, "tech house"),   # family "TECH HOUSE"
+          _t("b", 129, "8A", 0.5, "hip-hop")]       # family "HIP-HOP"
+    G = build_graph(tr, cfg)
+    assert not G.has_edge("a", "b")                 # cross-genre edge gated out
+
+
+def test_soft_scope_keeps_cross_family_edge():
+    cfg = _cfg()  # no genre_scope -> soft (default)
+    tr = [_t("a", 128, "8A", 0.5, "tech house"),
+          _t("b", 129, "8A", 0.5, "hip-hop")]
+    G = build_graph(tr, cfg)
+    assert G.has_edge("a", "b")

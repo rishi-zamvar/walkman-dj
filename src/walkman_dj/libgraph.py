@@ -53,8 +53,11 @@ def build_graph(tracks, cfg):
         G.add_node(t["fingerprint"], family=t.get("family"), bpm=t.get("bpm"),
                    energy=t.get("energy"), camelot=t.get("camelot"),
                    canon=t.get("canon_genre"))
+    hard_scope = cfg.get("genre_scope") == "hard"
     for i, j in candidate_pairs(tracks, cfg["bpm_window_pct"], cfg["bpm_window_floor"]):
         a, b = tracks[i], tracks[j]
+        if hard_scope and a.get("family") != b.get("family"):
+            continue                              # genre-pure: no cross-genre edges
         key_ok = camelot_edge_ok(a.get("camelot"), b.get("camelot"), cfg["allow_energy_boost"])
         key_unrel = not (_key_reliable(a, cfg) and _key_reliable(b, cfg))
         if not key_ok and not key_unrel:

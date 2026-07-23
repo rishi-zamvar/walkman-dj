@@ -10,4 +10,10 @@ allow_energy_boost = false
 exact_tsp_max_n  = 12
 w_template       = 1.0
 default_template = "single_peak"
-w_genre_bridge   = 0.5
+w_genre_bridge   = 1.0
+# Emergent set formation (whole-library community graph)
+genre_scope         = "hard"   # "hard" = no cross-genre edges (genre-pure sets); "soft" = genre-weighted
+community_resolution = 0.8      # Louvain resolution: higher -> smaller/more sub-vibe sets
+set_min             = 20        # communities smaller than this are merged/parked
+set_max             = 120       # communities larger than this are split
+louvain_seed        = 1         # deterministic community detection
