@@ -69,3 +69,4 @@ def build_graph(tracks, cfg):
                                                         b.get("canon_genre") or ""))
         G.add_edge(a["fingerprint"], b["fingerprint"], weight=1.0 / (1.0 + cost), cost=cost)
     return G
+
