@@ -57,7 +57,11 @@ def pull(path: str, dest_dir: str, retries=4) -> str:
     # whole 20-40 MB lossless file). BPM/key are exact from the prefix; the SD/USB link is
     # throughput-bound (~6 MB/s) so fewer bytes = proportionally faster. Files smaller than
     # N MB come through whole. Uses `adb exec-out dd` (binary-safe stream).
-    pfx = os.environ.get("WALKMAN_PREFIX_MB")
+    # Only prefix-pull STREAMABLE formats (flac/mp3 decode from the front). Container
+    # formats (m4a/mp4/aac) keep their index (moov atom) at the END, so a prefix has no
+    # header and won't decode — always full-pull those.
+    streamable = path.lower().rsplit(".", 1)[-1] in ("flac", "mp3")
+    pfx = os.environ.get("WALKMAN_PREFIX_MB") if streamable else None
     last = ""
     for i in range(retries):
         if pfx:
