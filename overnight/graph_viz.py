@@ -76,18 +76,8 @@ def _svg(name, tracks, cfg):
             f'<span class=meta>{sub}</span></h2>{"".join(parts)}</section>')
 
 
-def main():
-    feat_map = deploy_sets.features_by_filename()
-    cfg = seqcli.load_cfg()
-    order = ["Baile Funk", "Jersey Club", "UK Garage", "Tech House", "Organic & Afro House",
-             "Nu-Disco & Funk", "Electro", "Atlanta Trap", "Opium & Rage", "Travis Scott",
-             "Melodic Trap", "Toronto Nights", "Lyrical Hip-Hop", "Hip-Hop", "Alt R&B",
-             "Afrobeats", "Downtempo", "Pop"]
-    secs = [_svg(nm, _load_ordered(nm, feat_map), cfg) for nm in order]
-    nav = " · ".join(f'<a href="#{_norm(nm)}">{html.escape(nm)}</a>' for nm in order)
-    body = "".join(s.replace("<section>", f'<section id="{_norm(nm)}">')
-                   for nm, s in zip(order, secs))
-    doc = f"""<!doctype html><html><head><meta charset=utf-8><title>DJ Set Graphs</title><style>
+def _write_doc(title, heading, nav, body, out):
+    doc = f"""<!doctype html><html><head><meta charset=utf-8><title>{html.escape(title)}</title><style>
  body{{background:#0d0d0d;color:#e8e4d8;font-family:ui-monospace,Menlo,monospace;margin:0;padding:24px}}
  h1{{font-size:16px;letter-spacing:2px;color:#c9b872}} .nav{{font-size:11px;line-height:2;margin-bottom:20px}}
  .nav a{{color:#8a8574;text-decoration:none}} .nav a:hover{{color:#c9b872}}
@@ -98,15 +88,48 @@ def main():
  .empty{{color:#6a6656;font-size:12px;padding:8px 0}}
  .legend{{font-size:11px;color:#8a8574;margin:8px 0 18px}} .legend b{{color:#7fae7f}} .legend i{{color:#c0554e;font-style:normal}}
 </style></head><body>
-<h1>WALKMAN · DJ SET TRANSITION GRAPHS</h1>
+<h1>{html.escape(heading)}</h1>
 <div class=legend>node = track (color = Camelot key) · <b>green line</b> = harmonic transition ·
  <i>red dashed</i> = hard cut (mix manually) · faint lines = other mixable pairs nearby · y-axis = energy arc</div>
 <div class=nav>{nav}</div>
 {body}
 </body></html>"""
-    with open(OUT, "w", encoding="utf-8") as f:
+    with open(out, "w", encoding="utf-8") as f:
         f.write(doc)
-    print(f"wrote {OUT}")
+    print(f"wrote {out}")
+
+
+def main_emergent():
+    """Render node/edge graphs for the current emergent community sets (not the
+    fixed genre crates). Reuses _svg; mirrors main()'s doc/nav/section wrapping."""
+    import deploy_emergent
+    from walkman_dj import emergent
+    cfg = seqcli.load_cfg()
+    sets = emergent.build_sets(deploy_emergent.load_ondevice_tracks(), cfg)
+    sets = [s for s in sets if s["n"] >= 2]
+    names = [s["name"] for s in sets]
+    secs = [_svg(s["name"], s["ordered"], cfg) for s in sets]
+    nav = " · ".join(f'<a href="#{_norm(nm)}">{html.escape(nm)}</a>' for nm in names)
+    body = "".join(s.replace("<section>", f'<section id="{_norm(nm)}">')
+                   for nm, s in zip(names, secs))
+    out = os.path.expanduser("~/Desktop/DJ Emergent Graphs.html")
+    _write_doc("DJ Emergent Graphs", "WALKMAN · EMERGENT SET TRANSITION GRAPHS", nav, body, out)
+
+
+def main():
+    if "--emergent" in sys.argv:
+        return main_emergent()
+    feat_map = deploy_sets.features_by_filename()
+    cfg = seqcli.load_cfg()
+    order = ["Baile Funk", "Jersey Club", "UK Garage", "Tech House", "Organic & Afro House",
+             "Nu-Disco & Funk", "Electro", "Atlanta Trap", "Opium & Rage", "Travis Scott",
+             "Melodic Trap", "Toronto Nights", "Lyrical Hip-Hop", "Hip-Hop", "Alt R&B",
+             "Afrobeats", "Downtempo", "Pop"]
+    secs = [_svg(nm, _load_ordered(nm, feat_map), cfg) for nm in order]
+    nav = " · ".join(f'<a href="#{_norm(nm)}">{html.escape(nm)}</a>' for nm in order)
+    body = "".join(s.replace("<section>", f'<section id="{_norm(nm)}">')
+                   for nm, s in zip(order, secs))
+    _write_doc("DJ Set Graphs", "WALKMAN · DJ SET TRANSITION GRAPHS", nav, body, OUT)
 
 
 if __name__ == "__main__":
