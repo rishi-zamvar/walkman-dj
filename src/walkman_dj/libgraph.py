@@ -54,8 +54,11 @@ def build_graph(tracks, cfg):
                    energy=t.get("energy"), camelot=t.get("camelot"),
                    canon=t.get("canon_genre"))
     hard_scope = cfg.get("genre_scope") == "hard"
+    ab_gate = cfg.get("ab_gate")
     for i, j in candidate_pairs(tracks, cfg["bpm_window_pct"], cfg["bpm_window_floor"]):
         a, b = tracks[i], tracks[j]
+        if ab_gate and a.get("bucket") and b.get("bucket") and a.get("bucket") != b.get("bucket"):
+            continue                              # A/B gate: vocal/rap never mixes with music-forward
         if hard_scope and a.get("family") != b.get("family"):
             continue                              # genre-pure: no cross-genre edges
         key_ok = camelot_edge_ok(a.get("camelot"), b.get("camelot"), cfg["allow_energy_boost"])

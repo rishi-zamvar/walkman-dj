@@ -55,3 +55,18 @@ def test_soft_scope_keeps_cross_family_edge():
           _t("b", 129, "8A", 0.5, "hip-hop")]
     G = build_graph(tr, cfg)
     assert G.has_edge("a", "b")
+
+
+def test_ab_gate_blocks_cross_bucket_edges():
+    cfg = _cfg(); cfg["ab_gate"] = True
+    a = _t("a", 128, "8A", 0.5, "tech house"); a["bucket"] = "B"   # house
+    b = _t("b", 129, "8A", 0.5, "tech house"); b["bucket"] = "A"   # rap mislabeled into house family
+    G = build_graph([a, b], cfg)
+    assert not G.has_edge("a", "b")            # A never connects to B
+
+def test_ab_gate_allows_same_bucket():
+    cfg = _cfg(); cfg["ab_gate"] = True
+    a = _t("a", 128, "8A", 0.5, "tech house"); a["bucket"] = "B"
+    b = _t("b", 129, "8A", 0.5, "tech house"); b["bucket"] = "B"
+    G = build_graph([a, b], cfg)
+    assert G.has_edge("a", "b")

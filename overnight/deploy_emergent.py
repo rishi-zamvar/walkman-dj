@@ -42,6 +42,11 @@ def load_ondevice_tracks():
     devrel = _device_rel_by_name()
     con = sqlite3.connect(DB); con.row_factory = sqlite3.Row
     meta = {r["fingerprint"]: dict(r) for r in con.execute("SELECT * FROM tracks")}
+    buckets = {}
+    try:
+        buckets = {fp: b for fp, b in con.execute("SELECT fingerprint, bucket FROM track_bucket")}
+    except sqlite3.OperationalError:
+        pass
     con.close()
     out = []
     for key, d in feat.items():
@@ -54,6 +59,7 @@ def load_ondevice_tracks():
             continue
         t = dict(d)
         t["family"] = g["family"]; t["canon_genre"] = g["canon_genre"]
+        t["bucket"] = buckets.get(fp)          # 'A' vocal/rap | 'B' music-forward | None
         t["path"] = f"{DEV}/{cur}"
         t["title"] = (meta.get(fp) or {}).get("title") or os.path.splitext(os.path.basename(cur))[0]
         out.append(t)

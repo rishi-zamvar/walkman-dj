@@ -17,3 +17,4 @@ community_resolution = 0.8      # Louvain resolution: higher -> smaller/more sub
 set_min             = 20        # communities smaller than this are merged/parked
 set_max             = 120       # communities larger than this are split
 louvain_seed        = 1         # deterministic community detection
+ab_gate = true       # hard A/B separation: vocal/rap (A) never in a music-forward (B) set
