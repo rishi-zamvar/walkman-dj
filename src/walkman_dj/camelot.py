@@ -20,3 +20,16 @@ def compatible(code: str) -> list[str]:
     down = (num - 2) % 12 + 1
     relative = f"{num}{'B' if letter == 'A' else 'A'}"
     return [f"{num}{letter}", f"{down}{letter}", f"{up}{letter}", relative]
+
+
+def camelot_edge_ok(a: str, b: str, allow_boost: bool = False) -> bool:
+    """Harmonic mix gate: same code, ±1 same letter (wrap 12->1), or relative
+    major/minor (same number, letter swap). allow_boost also permits +/-2 same letter."""
+    if not a or not b:
+        return False
+    na, la = int(a[:-1]), a[-1]
+    nb, lb = int(b[:-1]), b[-1]
+    if la == lb:
+        step = min((na - nb) % 12, (nb - na) % 12)
+        return step <= (2 if allow_boost else 1)
+    return na == nb
