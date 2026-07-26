@@ -293,6 +293,36 @@ class CrateLib:
         self._index(dest, fp, dur)
         return IngestResult("added", dest)
 
+    def organize(self, dry_run=True, on_move=None) -> list:
+        """Move every indexed file to its tag-derived canonical path. Never overwrites,
+        updates the index, idempotent (a second run plans zero moves)."""
+        import shutil as _sh
+        import mutagen
+        with self._c() as c:
+            rows = c.execute("SELECT canonical_path FROM recordings").fetchall()
+        moves = []
+        for r in rows:
+            src = r["canonical_path"]
+            if not os.path.exists(src):
+                continue
+            tg = normalize_tags(src, write=False)
+            tn = None
+            mm = mutagen.File(src, easy=True)
+            if mm and mm.get("tracknumber"):
+                raw = str(mm["tracknumber"][0]).split("/")[0]
+                tn = int(raw) if raw.isdigit() else None
+            dst = canonical_path(self.root, src, tg, tracknum=tn)
+            if os.path.abspath(dst) == os.path.abspath(src):
+                continue
+            moves.append((src, dst))
+            if not dry_run and not os.path.exists(dst):     # never overwrite
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                _sh.move(src, dst)
+                self._reindex_path(src, dst)
+                if on_move:
+                    on_move(src, dst)
+        return moves
+
     def resolve(self, query: str, min_score: float = 70.0) -> str | None:
         """Return the single canonical file best matching a free-text 'artist title' query."""
         from rapidfuzz import fuzz, process

@@ -74,6 +74,26 @@ def cmd_get(args):
     print(dest)
 
 
+def cmd_organize(args):
+    lib = _lib(); logf = open(args.log, "w") if args.log else None
+    n = 0
+    def mv(s, d):
+        nonlocal n; n += 1
+        if logf: logf.write(f"{s}\t->\t{d}\n"); logf.flush()
+    moves = lib.organize(dry_run=not args.apply, on_move=mv)
+    if args.apply:
+        for dp, _, _ in os.walk(ROOT, topdown=False):        # prune emptied dirs
+            if dp != ROOT and not os.listdir(dp):
+                try: os.rmdir(dp)
+                except OSError: pass
+        print(f"moved {n} files into canonical layout")
+    else:
+        for s, d in moves[:40]:
+            print(f"  {os.path.relpath(s, ROOT)}  ->  {os.path.relpath(d, ROOT)}")
+        print(f"... {len(moves)} planned moves (run with --apply to execute)")
+    if logf: logf.close()
+
+
 def cmd_dedupe(args):
     lib = _lib()
     logf = open(args.log, "w") if args.log else None
@@ -118,6 +138,7 @@ def build_parser():
     sub.add_parser("stats").set_defaults(func=cmd_stats)
     sub.add_parser("verify").set_defaults(func=cmd_verify)
     pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
+    po = sub.add_parser("organize"); po.add_argument("--apply", action="store_true"); po.add_argument("--log"); po.set_defaults(func=cmd_organize)
     return p
 
 

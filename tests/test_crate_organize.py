@@ -32,6 +32,23 @@ def test_given_indexed_lib_when_verified_then_no_missing_or_dupes(tmp_path):
     assert report["recordings"] == 1
 
 
+def test_organize_moves_to_canonical_and_is_idempotent(tmp_path):
+    import mutagen
+    root = tmp_path / "lib"; root.mkdir()
+    src = _a_flac(tmp_path, name="random-name.flac")
+    m = mutagen.File(src, easy=True); m["albumartist"] = ["A"]; m["album"] = ["B"]; m["title"] = ["C"]
+    if m.get("tracknumber"):
+        del m["tracknumber"]
+    m.save()
+    lib = crate.CrateLib(str(tmp_path / "db.sqlite"), str(root))
+    lib.ingest(src, into_library=False)                 # index where it sits
+    plan = lib.organize(dry_run=True)
+    assert any(dst.endswith("/A/B/C.flac") for _, dst in plan)
+    lib.organize(dry_run=False)
+    assert os.path.exists(str(root / "A" / "B" / "C.flac"))
+    assert lib.organize(dry_run=True) == []             # idempotent
+
+
 def test_given_junky_tags_when_normalized_then_cleaned(tmp_path):
     import mutagen
     src = str(tmp_path / "x.mp3")
