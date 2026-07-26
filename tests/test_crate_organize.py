@@ -49,6 +49,15 @@ def test_organize_moves_to_canonical_and_is_idempotent(tmp_path):
     assert lib.organize(dry_run=True) == []             # idempotent
 
 
+def test_export_transcodes_playlist_to_m4a(tmp_path):
+    from walkman_dj import crate_cli
+    base = _a_flac(tmp_path, name="track.flac")
+    m3u = str(tmp_path / "p.m3u8"); open(m3u, "w").write("#EXTM3U\n" + base + "\n")
+    out = str(tmp_path / "out")
+    crate_cli.main(["export", m3u, "--to", out, "--format", "m4a"])
+    assert len([f for f in os.listdir(out) if f.endswith(".m4a")]) == 1
+
+
 def test_enrich_copies_bpm_by_artist_title(tmp_path):
     import sqlite3
     root = tmp_path / "lib"; root.mkdir()

@@ -74,6 +74,30 @@ def cmd_get(args):
     print(dest)
 
 
+def cmd_export(args):
+    os.makedirs(args.to, exist_ok=True)
+    entries = [l.strip() for l in open(args.playlist) if l.strip() and not l.startswith("#")]
+    done = 0
+    for src in entries:
+        if not os.path.exists(src):
+            continue
+        base = os.path.splitext(os.path.basename(src))[0]
+        if args.format and not src.lower().endswith("." + args.format):
+            dst = os.path.join(args.to, base + "." + args.format)
+            subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", src, "-map", "0:a", "-map", "0:v?",
+                            "-c:v", "copy", "-c:a", "aac" if args.format == "m4a" else args.format,
+                            "-b:a", "256k", "-map_metadata", "0", "-disposition:v", "attached_pic", dst],
+                           capture_output=True)
+            if not os.path.exists(dst):
+                subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-y", "-i", src,
+                                "-c:a", "aac", "-b:a", "256k", dst], capture_output=True)
+        else:
+            dst = os.path.join(args.to, os.path.basename(src)); subprocess.run(["cp", src, dst])
+        if os.path.exists(dst):
+            done += 1
+    print(f"exported {done}/{len(entries)} -> {args.to}")
+
+
 def cmd_enrich(args):
     adb = args.analysis or os.path.join(os.path.dirname(DB), "walkman_analysis.db")
     print("enriched", _lib().enrich_from_analysis(adb), "recordings from", os.path.basename(adb))
@@ -145,6 +169,7 @@ def build_parser():
     pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
     po = sub.add_parser("organize"); po.add_argument("--apply", action="store_true"); po.add_argument("--log"); po.set_defaults(func=cmd_organize)
     pe = sub.add_parser("enrich"); pe.add_argument("--analysis"); pe.set_defaults(func=cmd_enrich)
+    px = sub.add_parser("export"); px.add_argument("playlist"); px.add_argument("--to", required=True); px.add_argument("--format", default="m4a"); px.set_defaults(func=cmd_export)
     return p
 
 
