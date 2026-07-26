@@ -321,3 +321,21 @@ class CrateLib:
         with self._c() as c:
             n = c.execute("SELECT COUNT(*) FROM recordings").fetchone()[0]
         return {"recordings": n}
+
+    def verify(self) -> dict:
+        """Integrity check: missing files + accidental same-recording index rows."""
+        import json as _json
+        with self._c() as c:
+            rows = c.execute("SELECT canonical_path, fp, duration FROM recordings").fetchall()
+        missing = sum(1 for r in rows if not os.path.exists(r["canonical_path"]))
+        by_bucket = {}
+        for r in rows:
+            by_bucket.setdefault(int(r["duration"]), []).append(r)
+        dup = 0
+        for grp in by_bucket.values():
+            for i in range(len(grp)):
+                for j in range(i + 1, len(grp)):
+                    if same_recording(_json.loads(grp[i]["fp"]), grp[i]["duration"],
+                                      _json.loads(grp[j]["fp"]), grp[j]["duration"]):
+                        dup += 1
+        return {"recordings": len(rows), "missing": missing, "duplicate_pairs": dup}
