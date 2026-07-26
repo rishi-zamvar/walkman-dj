@@ -97,6 +97,14 @@ def cmd_verify(args):
     print(_lib().verify())
 
 
+def cmd_tagfix(args):
+    for p in args.files:
+        if not os.path.exists(p):
+            print(f"[skip] {p}"); continue
+        t = crate.normalize_tags(p, write=args.write)
+        print(("wrote " if args.write else "would fix "), os.path.basename(p), "->", t["artist"], "-", t["title"])
+
+
 def build_parser():
     p = argparse.ArgumentParser(prog="crate", description=__doc__.split("\n")[0])
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -109,6 +117,7 @@ def build_parser():
     pd = sub.add_parser("dedupe"); pd.add_argument("--log", help="write KEEP/TRASH audit log here"); pd.set_defaults(func=cmd_dedupe)
     sub.add_parser("stats").set_defaults(func=cmd_stats)
     sub.add_parser("verify").set_defaults(func=cmd_verify)
+    pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
     return p
 
 

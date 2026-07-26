@@ -30,3 +30,14 @@ def test_given_indexed_lib_when_verified_then_no_missing_or_dupes(tmp_path):
     assert report["missing"] == 0
     assert report["duplicate_pairs"] == 0
     assert report["recordings"] == 1
+
+
+def test_given_junky_tags_when_normalized_then_cleaned(tmp_path):
+    import mutagen
+    src = str(tmp_path / "x.mp3")
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i",
+                    "anullsrc=r=44100:cl=stereo", "-t", "3", "-c:a", "libmp3lame", src], check=True)
+    m = mutagen.File(src, easy=True); m["title"] = ["Song (youtube)"]; m["artist"] = ["Artist"]; m.save()
+    tags = crate.normalize_tags(src, write=True)
+    assert tags["title"] == "Song"
+    assert mutagen.File(src, easy=True)["title"][0] == "Song"

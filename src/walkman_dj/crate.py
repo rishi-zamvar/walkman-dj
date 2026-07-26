@@ -136,6 +136,47 @@ def trash(path: str) -> bool:
     return r.returncode == 0
 
 
+# ---------------- tag normalization + canonical layout ----------------
+
+def normalize_tags(path: str, write: bool = False) -> dict:
+    """Return cleaned {artist,title,album,albumartist}; optionally persist via mutagen."""
+    from walkman_dj import crate_tags
+    import mutagen
+    m = mutagen.File(path, easy=True)
+    raw = {k: (m.get(k, [""])[0] if m else "") for k in ("artist", "title", "album", "albumartist")}
+    stem = os.path.splitext(os.path.basename(path))[0]
+    fa, ft = crate_tags.split_stem(stem)
+    out = {
+        "title": crate_tags.clean_title(raw["title"] or ft or ""),
+        "artist": (raw["artist"] or fa or "").strip(),
+        "album": crate_tags.clean_title(raw["album"] or ""),
+        "albumartist": (raw["albumartist"] or raw["artist"] or fa or "").strip(),
+    }
+    if write and m is not None:
+        for k, v in out.items():
+            if v:
+                m[k] = [v]
+        m.save()
+    return out
+
+
+def _san(s: str) -> str:
+    return re.sub(r"\s{2,}", " ", re.sub(r"[/:]", "-", (s or "").strip())).strip(" .") or "Unknown"
+
+
+def canonical_path(root: str, src: str, tags: dict, tracknum=None) -> str:
+    """Tag-driven target path: album-tagged -> <AlbumArtist>/<Album>/NN - Title; else _Singles/<Artist>/Title."""
+    ext = os.path.splitext(src)[1].lower()
+    title = _san(tags.get("title") or os.path.splitext(os.path.basename(src))[0])
+    album = (tags.get("album") or "").strip()
+    if album:
+        aa = _san(tags.get("albumartist") or tags.get("artist") or "Unknown")
+        nn = f"{int(tracknum):02d} - " if tracknum else ""
+        return os.path.join(root, aa, _san(album), f"{nn}{title}{ext}")
+    artist = _san(tags.get("artist") or "Unknown")
+    return os.path.join(root, "_Singles", artist, f"{title}{ext}")
+
+
 # ---------------- library ----------------
 
 @dataclass
