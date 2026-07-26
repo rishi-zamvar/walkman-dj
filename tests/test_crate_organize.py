@@ -49,6 +49,27 @@ def test_organize_moves_to_canonical_and_is_idempotent(tmp_path):
     assert lib.organize(dry_run=True) == []             # idempotent
 
 
+def test_enrich_copies_bpm_by_artist_title(tmp_path):
+    import sqlite3
+    root = tmp_path / "lib"; root.mkdir()
+    lib = crate.CrateLib(str(tmp_path / "db.sqlite"), str(root))
+    with lib._c() as c:
+        c.execute("INSERT INTO recordings(canonical_path,artist,title,album,fmt,duration,dur_bucket,fp,akey) "
+                  "VALUES(?,?,?,?,?,?,?,?,?)",
+                  ("/x.flac", "Ken Carson", "Yale", "Teen X", "flac", 180, 180, "[1,2,3]", "kencarsonyale"))
+    adb = str(tmp_path / "analysis.db"); a = sqlite3.connect(adb)
+    a.executescript("CREATE TABLE tracks(fingerprint,artist,title); CREATE TABLE features(fingerprint,bpm,camelot,energy);"
+                    "CREATE TABLE track_genre(fingerprint,family);")
+    a.execute("INSERT INTO tracks VALUES('fp','Ken Carson','Yale')")
+    a.execute("INSERT INTO features VALUES('fp',151.0,'8A',0.7)")
+    a.execute("INSERT INTO track_genre VALUES('fp','opium_rage')"); a.commit(); a.close()
+    n = lib.enrich_from_analysis(adb)
+    assert n == 1
+    with lib._c() as c:
+        row = c.execute("SELECT bpm,camelot,family FROM recordings WHERE akey='kencarsonyale'").fetchone()
+    assert round(row["bpm"]) == 151 and row["camelot"] == "8A" and row["family"] == "opium_rage"
+
+
 def test_given_junky_tags_when_normalized_then_cleaned(tmp_path):
     import mutagen
     src = str(tmp_path / "x.mp3")

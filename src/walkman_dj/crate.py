@@ -206,6 +206,11 @@ class CrateLib:
         self.root = library_root
         with self._c() as c:
             c.executescript(SCHEMA)
+            for col in ("bpm REAL", "camelot TEXT", "energy REAL", "family TEXT"):
+                try:
+                    c.execute(f"ALTER TABLE recordings ADD COLUMN {col}")
+                except sqlite3.OperationalError:
+                    pass
 
     def _c(self):
         c = sqlite3.connect(self.db_path, timeout=60)
@@ -392,6 +397,28 @@ class CrateLib:
         with self._c() as c:
             n = c.execute("SELECT COUNT(*) FROM recordings").fetchone()[0]
         return {"recordings": n}
+
+    def enrich_from_analysis(self, analysis_db: str) -> int:
+        """Backfill bpm/camelot/energy/family from walkman_analysis.db by (artist,title) match."""
+        import sqlite3 as _sq
+        a = _sq.connect(analysis_db); a.row_factory = _sq.Row
+        src = {}
+        for r in a.execute("""SELECT t.artist, t.title, f.bpm, f.camelot, f.energy, g.family
+                              FROM tracks t LEFT JOIN features f USING(fingerprint)
+                              LEFT JOIN track_genre g USING(fingerprint)"""):
+            k = _norm(f"{r['artist']} {r['title']}")
+            if k and k not in src:
+                src[k] = r
+        a.close()
+        n = 0
+        with self._c() as c:
+            for row in c.execute("SELECT akey FROM recordings WHERE bpm IS NULL").fetchall():
+                s = src.get(row["akey"])
+                if s and s["bpm"] is not None:
+                    c.execute("UPDATE recordings SET bpm=?,camelot=?,energy=?,family=? WHERE akey=?",
+                              (s["bpm"], s["camelot"], s["energy"], s["family"], row["akey"]))
+                    n += 1
+        return n
 
     def verify(self) -> dict:
         """Integrity check: missing files + accidental same-recording index rows."""

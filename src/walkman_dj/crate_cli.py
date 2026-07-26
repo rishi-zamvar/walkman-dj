@@ -74,6 +74,11 @@ def cmd_get(args):
     print(dest)
 
 
+def cmd_enrich(args):
+    adb = args.analysis or os.path.join(os.path.dirname(DB), "walkman_analysis.db")
+    print("enriched", _lib().enrich_from_analysis(adb), "recordings from", os.path.basename(adb))
+
+
 def cmd_organize(args):
     lib = _lib(); logf = open(args.log, "w") if args.log else None
     n = 0
@@ -139,6 +144,7 @@ def build_parser():
     sub.add_parser("verify").set_defaults(func=cmd_verify)
     pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
     po = sub.add_parser("organize"); po.add_argument("--apply", action="store_true"); po.add_argument("--log"); po.set_defaults(func=cmd_organize)
+    pe = sub.add_parser("enrich"); pe.add_argument("--analysis"); pe.set_defaults(func=cmd_enrich)
     return p
 
 
