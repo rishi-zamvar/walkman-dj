@@ -1,0 +1,20 @@
+# config/sequencer.toml — all sequencer weights/windows in one place
+bpm_window_pct   = 0.06
+bpm_window_floor = 4.0
+bpm_conf_min     = 0.60
+key_conf_min     = 0.55
+w_energy_jump    = 0.5
+w_unreliable_bpm = 0.2
+w_unreliable_key = 0.3
+allow_energy_boost = false
+exact_tsp_max_n  = 12
+w_template       = 1.0
+default_template = "single_peak"
+w_genre_bridge   = 1.0
+# Emergent set formation (whole-library community graph)
+genre_scope         = "hard"   # "hard" = no cross-genre edges (genre-pure sets); "soft" = genre-weighted
+community_resolution = 0.8      # Louvain resolution: higher -> smaller/more sub-vibe sets
+set_min             = 20        # communities smaller than this are merged/parked
+set_max             = 120       # communities larger than this are split
+louvain_seed        = 1         # deterministic community detection
+ab_gate = true       # hard A/B separation: vocal/rap (A) never in a music-forward (B) set

@@ -1,0 +1,66 @@
+{
+  "started": 1784864680.0372758,
+  "last_update": 1784914044.418922,
+  "current": "\u2705 OVERNIGHT LOOP COMPLETE \u2014 all DoD items satisfied. Cron stopped.",
+  "bullets": [
+    "\u2705 T1 albums: partials completed + 472 tracks / 294 albums transferred to Walkman",
+    "\u2705 T2 analysis: 4269 unique tracks SOTA-beatgridded + 343 failed(corrupt); 'remaining' proven to be filename-skip-list dupes/phantoms \u2014 max achievable reached",
+    "\u2705 T3 graph: adjacent genre scope, 93% homogeneity, 52 emergent communities deployed",
+    "\u2705 T4 playlists: 7 curated (UKG, Chicago ghetto house incl. Push N Shove, Future discography, jungle/DnB, afro/organic, Drake-Toronto, real baile) on Walkman",
+    "\u2705 T5 skill: walkman-playlist-push present",
+    "\ud83d\uded1 Cron e3a55e2c stopped. Bonus this session: full lake dedup (348 dupes), Alexis Birthday Jam 133-track playlist, Walkman device dedup"
+  ],
+  "tasks": {
+    "T2_engine": {
+      "label": "SOTA analysis engine",
+      "status": "done",
+      "pct": 100,
+      "note": "beat-this + deeprhythm + librosa in ~/.venvs/analysis (MPS GPU)"
+    },
+    "T2_analyze": {
+      "label": "Analyze all disk songs",
+      "status": "done",
+      "done": 4269,
+      "total": 7808,
+      "pct": 100,
+      "note": "all unique content gridded; 'remaining' were dupes/phantoms"
+    },
+    "T1_albums": {
+      "label": "Complete + transfer albums",
+      "status": "done",
+      "completed": 294,
+      "total": 294,
+      "pct": 100,
+      "note": "partials filled + albums transferred"
+    },
+    "T3_graph": {
+      "label": "Tune emergent graph",
+      "status": "done",
+      "homogeneity": 0.93,
+      "pct": 100,
+      "note": "93% homogeneity, 52 communities deployed"
+    },
+    "T4_playlists": {
+      "label": "7 curated playlists",
+      "status": "done",
+      "done": 7,
+      "total": 7,
+      "pct": 100,
+      "note": "7/7 live on Walkman"
+    },
+    "T5_skill": {
+      "label": "walkman-playlist-push skill",
+      "status": "done",
+      "pct": 100,
+      "note": "built + documented"
+    }
+  },
+  "kpis": {
+    "tracks_analyzed": 3451,
+    "albums_completed": 0,
+    "tracks_downloaded": 103,
+    "playlists_built": 7,
+    "disk_free_gb": 8
+  },
+  "status": "COMPLETE"
+}
