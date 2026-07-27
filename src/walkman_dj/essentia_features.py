@@ -44,14 +44,18 @@ def extract(path: str) -> dict:
         zcr = float(es.ZeroCrossingRate()(audio))          # music ~0.03-0.12, speechy higher
         flat = float(es.Flatness()(spec)) if spec.size else 0.0  # 0..1, noise/live -> higher
         d = _clamp(dance / 3.0)
+        # acousticness: calibrated to the library's centroid range (~0.04-0.30).
+        # bright + danceable -> electronic -> low; dark + sparse -> acoustic -> high.
+        bright = _clamp(centroid / 0.30)
+        acousticness = _clamp((1.0 - bright) * 0.7 + (1.0 - d) * 0.3)
         return {
             "essentia_danceability": d,
             "loudness_db": loudness_db,
-            "acousticness": _clamp(1.0 - centroid * 2.0),          # bright -> low acousticness
+            "acousticness": acousticness,
             "instrumentalness": _clamp(1.0 - zcr * 6.0),           # low ZCR -> instrumental
             "speechiness": _clamp((zcr - 0.03) * 6.0),             # elevated ZCR -> speech
             "liveness": _clamp(flat * 2.5),                        # spectral flatness proxy
-            "valence": _clamp(d * 0.6 + (1 - centroid) * 0.4),
+            "valence": _clamp(d * 0.6 + (1 - centroid) * 0.4),     # fallback; mood_happy preferred
         }
     except Exception:
         return {}

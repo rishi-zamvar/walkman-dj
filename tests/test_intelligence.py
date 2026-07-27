@@ -46,6 +46,26 @@ def test_analyze_song_returns_normalized_versioned():
     assert r["analysis_version"] == I.ANALYSIS_VERSION
 
 
+def _write_wav(path, freq, sr=44100, secs=5):
+    import numpy as np, wave, struct
+    t = np.linspace(0, secs, sr * secs, endpoint=False)
+    x = (0.3 * np.sin(2 * np.pi * freq * t)).astype("float32")
+    w = wave.open(path, "w"); w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
+    w.writeframes((x * 32767).astype("<i2").tobytes()); w.close()
+
+
+def test_acousticness_spreads_bright_below_dark(tmp_path):
+    if not ef.available():
+        import pytest; pytest.skip("essentia not installed")
+    bright = str(tmp_path / "bright.wav"); _write_wav(bright, 8000)
+    dark = str(tmp_path / "dark.wav"); _write_wav(dark, 120)
+    ab = ef.extract(bright).get("acousticness")
+    ad = ef.extract(dark).get("acousticness")
+    if ab is not None and ad is not None:
+        assert ab < ad                      # bright/electronic reads less acoustic
+        assert ab < 0.5                      # not pinned high anymore
+
+
 def test_analyze_song_bad_file_returns_failed(tmp_path):
     from walkman_dj import intelligence as I
     bad = str(tmp_path / "x.flac"); open(bad, "wb").write(b"nope")
