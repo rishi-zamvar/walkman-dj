@@ -22,6 +22,7 @@ PROFILES = {
                     "acousticness": 1.3, "instrumentalness": 1.4,
                     "speechiness": 1.6, "liveness": 0.4},
         "size": 44,          # vibe prune is the big cut — this defines the set
+        "drum_min": 0.92,    # min drum/energy mix confidence — tuned to the smoothness knee
         "template": "single_peak",
     },
 }
