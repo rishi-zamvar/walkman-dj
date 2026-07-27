@@ -173,6 +173,17 @@ def cmd_backfill_genre(args):
     print(f"enqueued {n} songs for genre backfill — run: crate analyzer --daemon")
 
 
+def cmd_vibe_path(args):
+    from walkman_dj import vibe_path
+    r = vibe_path.run(DB, args.genre, k=args.min_vibe, min_conf=args.min_conf,
+                      pct=args.pct, do_rationalize=args.rationalize)
+    if r.get("error"):
+        print(r["error"]); return
+    print(f"{args.genre}: {r['candidates']} candidates -> vibe-kept {r['vibe_kept']} "
+          f"(pruned {r['pruned_vibe']}) -> master {r['master']} (pruned {r['pruned_transition']} hard)")
+    print(f"  {r['m3u8']}\n  {r['md']}")
+
+
 def cmd_analyzer(args):
     import sqlite3, time
     from walkman_dj import schema, intelligence, spotify_meta
@@ -301,6 +312,12 @@ def build_parser():
     psm = sub.add_parser("spotify-match"); psm.add_argument("query"); psm.set_defaults(func=cmd_spotify_match)
     pz = sub.add_parser("analyzer"); pz.add_argument("--once", action="store_true"); pz.add_argument("--daemon", action="store_true"); pz.add_argument("--shard", help="i/N: process only shard i of N (parallel workers)"); pz.add_argument("--genre-only", action="store_true", help="skip SOTA beatgrid; only genre/valence/essentia"); pz.set_defaults(func=cmd_analyzer)
     sub.add_parser("backfill-genre").set_defaults(func=cmd_backfill_genre)
+    pvp = sub.add_parser("vibe-path"); pvp.add_argument("genre")
+    pvp.add_argument("--min-vibe", type=float, default=1.3, help="std cutoff for vibe outliers (lower=stricter)")
+    pvp.add_argument("--min-conf", type=float, default=0.12, help="min genre_confidence for audio-classified tracks")
+    pvp.add_argument("--pct", type=float, default=90, help="hard-transition percentile cutoff")
+    pvp.add_argument("--rationalize", action="store_true", help="LLM-review the ordered set")
+    pvp.set_defaults(func=cmd_vibe_path)
     sub.add_parser("backfill").set_defaults(func=cmd_backfill)
     pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
     po = sub.add_parser("organize"); po.add_argument("--apply", action="store_true"); po.add_argument("--log"); po.set_defaults(func=cmd_organize)
