@@ -146,6 +146,13 @@ def cmd_verify(args):
     print(_lib().verify())
 
 
+def cmd_spotify_match(args):
+    from walkman_dj import spotify_meta
+    import json
+    a, _, t = args.query.partition(" - ")
+    print(json.dumps(spotify_meta.match(a.strip(), t.strip() or a.strip()), indent=1))
+
+
 def cmd_analyze(args):
     from walkman_dj import intelligence
     import json
@@ -181,6 +188,7 @@ def build_parser():
     sub.add_parser("verify").set_defaults(func=cmd_verify)
     pmig = sub.add_parser("migrate-analysis"); pmig.add_argument("--analysis"); pmig.set_defaults(func=cmd_migrate_analysis)
     pan = sub.add_parser("analyze"); pan.add_argument("file"); pan.set_defaults(func=cmd_analyze)
+    psm = sub.add_parser("spotify-match"); psm.add_argument("query"); psm.set_defaults(func=cmd_spotify_match)
     pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
     po = sub.add_parser("organize"); po.add_argument("--apply", action="store_true"); po.add_argument("--log"); po.set_defaults(func=cmd_organize)
     pe = sub.add_parser("enrich"); pe.add_argument("--analysis"); pe.set_defaults(func=cmd_enrich)
