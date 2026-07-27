@@ -178,19 +178,21 @@ def cmd_analyzer(args):
     from walkman_dj import schema, intelligence, spotify_meta
     schema.ensure_schema(DB)
     _FEAT = [c for c, _ in schema.NEW_COLUMNS]
+    genre_only = getattr(args, "genre_only", False)
 
     def analyze_one(fp, path):
         con = sqlite3.connect(DB); con.row_factory = sqlite3.Row
         tr = con.execute("SELECT artist,title,duration,bpm,key,camelot,beat_engine FROM recordings WHERE fp=?", (fp,)).fetchone()
         con.close()
-        # fast path: MIR already migrated -> only add Essentia + derived key/mode (skip ~20s SOTA)
-        if tr and tr["bpm"] is not None and tr["beat_engine"]:
+        # fast path: MIR already migrated (or --genre-only) -> Essentia only, skip ~25s SOTA beatgrid
+        if (tr and tr["bpm"] is not None and tr["beat_engine"]) or genre_only:
             from walkman_dj import essentia_features
             import datetime
             r = {"status": "ok", "analysis_version": intelligence.ANALYSIS_VERSION,
                  "analyzed_at": datetime.datetime.now().isoformat(timespec="seconds")}
-            r["spotify_mode"] = 0 if (tr["camelot"] or "").endswith("A") else 1
-            r["spotify_key"] = intelligence._PITCH.get(tr["key"], -1)
+            if tr and tr["camelot"]:
+                r["spotify_mode"] = 0 if tr["camelot"].endswith("A") else 1
+                r["spotify_key"] = intelligence._PITCH.get(tr["key"], -1)
             r.update(essentia_features.extract(path))
         else:
             r = intelligence.analyze_song(path)
@@ -297,7 +299,7 @@ def build_parser():
     pmig = sub.add_parser("migrate-analysis"); pmig.add_argument("--analysis"); pmig.set_defaults(func=cmd_migrate_analysis)
     pan = sub.add_parser("analyze"); pan.add_argument("file"); pan.set_defaults(func=cmd_analyze)
     psm = sub.add_parser("spotify-match"); psm.add_argument("query"); psm.set_defaults(func=cmd_spotify_match)
-    pz = sub.add_parser("analyzer"); pz.add_argument("--once", action="store_true"); pz.add_argument("--daemon", action="store_true"); pz.add_argument("--shard", help="i/N: process only shard i of N (parallel workers)"); pz.set_defaults(func=cmd_analyzer)
+    pz = sub.add_parser("analyzer"); pz.add_argument("--once", action="store_true"); pz.add_argument("--daemon", action="store_true"); pz.add_argument("--shard", help="i/N: process only shard i of N (parallel workers)"); pz.add_argument("--genre-only", action="store_true", help="skip SOTA beatgrid; only genre/valence/essentia"); pz.set_defaults(func=cmd_analyzer)
     sub.add_parser("backfill-genre").set_defaults(func=cmd_backfill_genre)
     sub.add_parser("backfill").set_defaults(func=cmd_backfill)
     pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
