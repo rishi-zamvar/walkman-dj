@@ -142,7 +142,10 @@ def normalize_tags(path: str, write: bool = False) -> dict:
     """Return cleaned {artist,title,album,albumartist}; optionally persist via mutagen."""
     from walkman_dj import crate_tags
     import mutagen
-    m = mutagen.File(path, easy=True)
+    try:
+        m = mutagen.File(path, easy=True)
+    except Exception:               # corrupt / mislabeled container -> fall back to filename
+        m = None
     raw = {k: (m.get(k, [""])[0] if m else "") for k in ("artist", "title", "album", "albumartist")}
     stem = os.path.splitext(os.path.basename(path))[0]
     fa, ft = crate_tags.split_stem(stem)
@@ -312,7 +315,10 @@ class CrateLib:
                 continue
             tg = normalize_tags(src, write=False)
             tn = None
-            mm = mutagen.File(src, easy=True)
+            try:
+                mm = mutagen.File(src, easy=True)
+            except Exception:
+                mm = None
             if mm and mm.get("tracknumber"):
                 raw = str(mm["tracknumber"][0]).split("/")[0]
                 tn = int(raw) if raw.isdigit() else None

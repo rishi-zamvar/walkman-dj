@@ -79,6 +79,15 @@ def test_enrich_copies_bpm_by_artist_title(tmp_path):
     assert round(row["bpm"]) == 151 and row["camelot"] == "8A" and row["family"] == "opium_rage"
 
 
+def test_normalize_tags_survives_corrupt_file(tmp_path):
+    # a file with .flac extension that is NOT a valid FLAC (mislabeled container)
+    bad = str(tmp_path / "10 - Artist - Song.flac")
+    with open(bad, "wb") as f:
+        f.write(b"ID3\x03\x00\x00\x00\x00\x00\x00not really flac")
+    tags = crate.normalize_tags(bad, write=False)     # must not raise
+    assert tags["title"] == "Song" and tags["artist"] == "Artist"
+
+
 def test_given_junky_tags_when_normalized_then_cleaned(tmp_path):
     import mutagen
     src = str(tmp_path / "x.mp3")
