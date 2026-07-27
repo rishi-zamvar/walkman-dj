@@ -166,13 +166,23 @@ def cmd_analyzer(args):
     _FEAT = [c for c, _ in schema.NEW_COLUMNS]
 
     def analyze_one(fp, path):
-        r = intelligence.analyze_song(path)
+        con = sqlite3.connect(DB); con.row_factory = sqlite3.Row
+        tr = con.execute("SELECT artist,title,duration,bpm,key,camelot,beat_engine FROM recordings WHERE fp=?", (fp,)).fetchone()
+        con.close()
+        # fast path: MIR already migrated -> only add Essentia + derived key/mode (skip ~20s SOTA)
+        if tr and tr["bpm"] is not None and tr["beat_engine"]:
+            from walkman_dj import essentia_features
+            import datetime
+            r = {"status": "ok", "analysis_version": intelligence.ANALYSIS_VERSION,
+                 "analyzed_at": datetime.datetime.now().isoformat(timespec="seconds")}
+            r["spotify_mode"] = 0 if (tr["camelot"] or "").endswith("A") else 1
+            r["spotify_key"] = intelligence._PITCH.get(tr["key"], -1)
+            r.update(essentia_features.extract(path))
+        else:
+            r = intelligence.analyze_song(path)
         if r.get("status") != "ok":
             schema.bump_attempt(DB, fp)
             return False
-        con = sqlite3.connect(DB); con.row_factory = sqlite3.Row
-        tr = con.execute("SELECT artist,title,duration FROM recordings WHERE fp=?", (fp,)).fetchone()
-        con.close()
         if tr:
             try:
                 r.update(spotify_meta.match(tr["artist"] or "", tr["title"] or "", tr["duration"]))
