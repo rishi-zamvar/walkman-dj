@@ -200,6 +200,19 @@ def cmd_refix_genre(args):
     print(f"refixed {changed}/{len(rows)} audio genres (floor={genre_label._AUDIO_MIN})")
 
 
+def cmd_import_rekordbox(args):
+    """Import authoritative key + BPM from the live Rekordbox DB (close Rekordbox first)."""
+    from walkman_dj import rekordbox_import
+    try:
+        r = rekordbox_import.import_keys(DB)
+    except Exception as e:
+        print(f"could not read Rekordbox DB ({type(e).__name__}: {e}).")
+        print("Make sure Rekordbox is installed and CLOSED, then retry.")
+        return
+    print(f"Rekordbox: {r['rekordbox_tracks']} tracks | matched {r['matched']} by path | "
+          f"updated {r['updated']} with authoritative key+BPM")
+
+
 def cmd_vibe_path(args):
     from walkman_dj import vibe_path
     r = vibe_path.run(DB, args.genre, vibe=args.vibe, k=args.min_vibe, min_conf=args.min_conf,
@@ -339,6 +352,7 @@ def build_parser():
     pz = sub.add_parser("analyzer"); pz.add_argument("--once", action="store_true"); pz.add_argument("--daemon", action="store_true"); pz.add_argument("--shard", help="i/N: process only shard i of N (parallel workers)"); pz.add_argument("--genre-only", action="store_true", help="skip SOTA beatgrid; only genre/valence/essentia"); pz.set_defaults(func=cmd_analyzer)
     sub.add_parser("backfill-genre").set_defaults(func=cmd_backfill_genre)
     sub.add_parser("refix-genre").set_defaults(func=cmd_refix_genre)
+    sub.add_parser("import-rekordbox").set_defaults(func=cmd_import_rekordbox)
     pvp = sub.add_parser("vibe-path"); pvp.add_argument("genre")
     pvp.add_argument("--vibe", help="curate toward a set vibe profile (e.g. boiler_room)")
     pvp.add_argument("--min-vibe", type=float, default=1.3, help="std cutoff for vibe outliers (lower=stricter)")
