@@ -146,6 +146,13 @@ def cmd_verify(args):
     print(_lib().verify())
 
 
+def cmd_migrate_analysis(args):
+    from walkman_dj import schema
+    schema.ensure_schema(DB)
+    ana = args.analysis or os.path.join(os.path.dirname(DB), "walkman_analysis.db")
+    print("migrated MIR for", schema.migrate_analysis(DB, ana), "recordings from", os.path.basename(ana))
+
+
 def cmd_tagfix(args):
     for p in args.files:
         if not os.path.exists(p):
@@ -166,6 +173,7 @@ def build_parser():
     pd = sub.add_parser("dedupe"); pd.add_argument("--log", help="write KEEP/TRASH audit log here"); pd.set_defaults(func=cmd_dedupe)
     sub.add_parser("stats").set_defaults(func=cmd_stats)
     sub.add_parser("verify").set_defaults(func=cmd_verify)
+    pmig = sub.add_parser("migrate-analysis"); pmig.add_argument("--analysis"); pmig.set_defaults(func=cmd_migrate_analysis)
     pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
     po = sub.add_parser("organize"); po.add_argument("--apply", action="store_true"); po.add_argument("--log"); po.set_defaults(func=cmd_organize)
     pe = sub.add_parser("enrich"); pe.add_argument("--analysis"); pe.set_defaults(func=cmd_enrich)

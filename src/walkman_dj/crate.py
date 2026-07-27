@@ -214,6 +214,8 @@ class CrateLib:
                     c.execute(f"ALTER TABLE recordings ADD COLUMN {col}")
                 except sqlite3.OperationalError:
                     pass
+        from walkman_dj import schema
+        schema.ensure_schema(self.db_path)
 
     def _c(self):
         c = sqlite3.connect(self.db_path, timeout=60)
