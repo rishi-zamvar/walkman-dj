@@ -304,13 +304,19 @@ class CrateLib:
                 trash(existing)
             self._remove_index(existing)
             self._index(dest, fp, dur)
+            self._enqueue_analysis(fp, dest)
             return IngestResult("replaced", dest, duplicate_of=existing)
         # new recording
         dest = self._dest_for(path) if into_library else path
         if into_library and os.path.abspath(dest) != path:
             shutil.move(path, dest)
         self._index(dest, fp, dur)
+        self._enqueue_analysis(fp, dest)
         return IngestResult("added", dest)
+
+    def _enqueue_analysis(self, fp, dest):
+        from walkman_dj import schema
+        schema.enqueue(self.db_path, json.dumps(fp), dest)   # match recordings.fp string form
 
     def organize(self, dry_run=True, on_move=None) -> list:
         """Move every indexed file to its tag-derived canonical path. Never overwrites,
