@@ -130,47 +130,65 @@ def prune_transitions(P, idx, pct=90):
 
 
 def harmonic_path(idx, rows, pct=BPM_PCT, drum_min=DRUM_MIN):
-    """Build the longest chain where EVERY consecutive mix is valid. Greedy bidirectional
-    extend (lowest-cost valid neighbour off each end) then an insertion pass that slots any
-    remaining track between a compatible pair — recovers tracks a single-pass chain strands."""
-    valid = {i: {j: transition(rows[i], rows[j], pct, drum_min) for j in idx
-                 if j != i and transition(rows[i], rows[j], pct, drum_min) < INVALID}
-             for i in idx}
-    connected = [i for i in idx if valid[i]]
-    if not connected:
-        return list(idx[:1])
-    start = min(connected, key=lambda i: rows[i]["energy"] or 0.0)   # open on lowest energy
-    chain, used = [start], {start}
-
-    def grow(at_tail):
-        while True:
-            end = chain[-1] if at_tail else chain[0]
-            cands = [(c, j) for j, c in valid[end].items() if j not in used]
-            if not cands:
-                return
-            _, j = min(cands)
-            used.add(j)
-            chain.append(j) if at_tail else chain.insert(0, j)
-
-    grow(True); grow(False)
-    changed = True
-    while changed:                                   # insertion: absorb the rest of the component
-        changed = False
-        for x in idx:
-            if x in used:
+    """Longest chain where EVERY consecutive mix is valid, via Pósa rotation — the
+    standard Hamiltonian-path heuristic. Extend from both ends; when an end dead-ends,
+    rotate the path (reverse the segment past an interior neighbour) to open a fresh end.
+    Every edge added — by extension or rotation — is a valid mix, so the whole path is clean."""
+    idx = list(idx)
+    if len(idx) < 2:
+        return idx
+    adj = {i: {j for j in idx if j != i and transition(rows[i], rows[j], pct, drum_min) < INVALID}
+           for i in idx}
+    if not any(adj.values()):
+        return idx[:1]
+    # build the set through the LARGEST mixable component; smaller pockets can't mix in.
+    seen, comps = set(), []
+    for s in idx:
+        if s in seen:
+            continue
+        stack, comp = [s], []
+        while stack:
+            u = stack.pop()
+            if u in seen:
                 continue
-            for p in range(len(chain) - 1):
-                if chain[p + 1] in valid[x] and chain[p] in valid[x]:
-                    chain.insert(p + 1, x); used.add(x); changed = True; break
-            else:
-                if chain[-1] in valid[x]:
-                    chain.append(x); used.add(x); changed = True
-                elif chain[0] in valid[x]:
-                    chain.insert(0, x); used.add(x); changed = True
-    return chain
+            seen.add(u); comp.append(u); stack += [j for j in adj[u] if j not in seen]
+        comps.append(comp)
+    comp = set(max(comps, key=len))
+    adj = {i: (adj[i] & comp) for i in comp}
+    idx = list(comp)
+    start = min(comp, key=lambda i: rows[i]["energy"] or 0.0)     # open on lowest energy
+    path, inp = [start], {start}
+
+    def extend():
+        moved = True
+        while moved:
+            moved = False
+            for tail_side in (True, False):
+                end = path[-1] if tail_side else path[0]
+                nb = [j for j in adj[end] if j not in inp]
+                if nb:
+                    j = min(nb, key=lambda j: transition(rows[end], rows[j], pct, drum_min))
+                    path.append(j) if tail_side else path.insert(0, j)
+                    inp.add(j); moved = True
+
+    extend()
+    last = -1
+    while len(inp) < len(idx) and len(inp) != last:      # rotate until no new track lands
+        last = len(inp)
+        for flip in (False, True):                        # rotate off tail, then head
+            if flip:
+                path.reverse()
+            for w in adj[path[-1]]:
+                i = path.index(w)
+                if i < len(path) - 2:                     # interior neighbour -> new endpoint
+                    path[i + 1:] = path[i + 1:][::-1]
+                    extend()
+                    break
+    kept, _ = clean_chain(path, rows, pct, drum_min)      # guarantee every edge is a valid mix
+    return kept
 
 
-def clean_chain(global_order, rows):
+def clean_chain(global_order, rows, pct=BPM_PCT, drum_min=DRUM_MIN):
     """Keep the run where every consecutive mix is valid; thread past any track whose
     incoming mix would be a hard cut. Returns (kept, dropped) global indices."""
     if not global_order:
@@ -178,7 +196,7 @@ def clean_chain(global_order, rows):
     kept = [global_order[0]]
     dropped = []
     for i in global_order[1:]:
-        if transition(rows[kept[-1]], rows[i]) < INVALID:
+        if transition(rows[kept[-1]], rows[i], pct, drum_min) < INVALID:
             kept.append(i)
         else:
             dropped.append(i)
