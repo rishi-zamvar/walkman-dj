@@ -258,8 +258,10 @@ def run(db, genre, vibe=None, k=1.3, min_conf=0.12, pct=90, do_rationalize=False
     if vibe:                                  # curate toward a set vibe (Boiler Room, etc.)
         prof = profiles.PROFILES[vibe]
         size = prof["size"]
-        pool = curate(rows, prof, count=prof.get("pool", size * 3))   # wide vibe-fit pool
-        chain = harmonic_path(pool, rows)                    # longest all-harmonic chain
+        # vibe prune IS the cut: take the best-vibe-fit `size` tracks (small insurance
+        # over-select so a rare non-connecting track doesn't shrink the set).
+        pool = curate(rows, prof, count=prof.get("pool", int(size * 1.3)))
+        chain = harmonic_path(pool, rows)                    # order them all-harmonic
         final = chain[:size]
         keep, dropped_trans = pool, [i for i in pool if i not in chain]
         label = f"{genre} — {vibe.replace('_', ' ').title()}"
