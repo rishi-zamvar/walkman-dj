@@ -146,6 +146,54 @@ def cmd_verify(args):
     print(_lib().verify())
 
 
+def cmd_analyzer(args):
+    import sqlite3, time
+    from walkman_dj import schema, intelligence, spotify_meta
+    schema.ensure_schema(DB)
+    _FEAT = [c for c, _ in schema.NEW_COLUMNS]
+
+    def analyze_one(fp, path):
+        r = intelligence.analyze_song(path)
+        if r.get("status") != "ok":
+            schema.bump_attempt(DB, fp)
+            return False
+        con = sqlite3.connect(DB); con.row_factory = sqlite3.Row
+        tr = con.execute("SELECT artist,title,duration FROM recordings WHERE fp=?", (fp,)).fetchone()
+        con.close()
+        if tr:
+            try:
+                r.update(spotify_meta.match(tr["artist"] or "", tr["title"] or "", tr["duration"]))
+            except Exception:
+                pass
+        segs = r.pop("segments", [])
+        fields = {k: v for k, v in r.items() if k in _FEAT}
+        sets = ",".join(f"{k}=?" for k in fields)
+        with sqlite3.connect(DB, timeout=60) as c:
+            if sets:
+                c.execute(f"UPDATE recordings SET {sets} WHERE fp=?", (*fields.values(), fp))
+            c.execute("DELETE FROM segments WHERE fingerprint=?", (fp,))
+            c.executemany("INSERT INTO segments(fingerprint,idx,label,start,end) VALUES(?,?,?,?,?)",
+                          [(fp, s["idx"], s["label"], s["start"], s["end"]) for s in segs])
+        schema.dequeue(DB, fp)
+        return True
+
+    while True:
+        pend = [(fp, p) for fp, p in schema.pending(DB, 500)
+                if sqlite3.connect(DB).execute(
+                    "SELECT attempts FROM pending_analysis WHERE fingerprint=?", (fp,)).fetchone()[0] < 3]
+        if not pend:
+            if args.daemon:
+                time.sleep(15); continue
+            break
+        for i, (fp, path) in enumerate(pend, 1):
+            analyze_one(fp, path)
+            if i % 10 == 0:
+                print(f"  analyzed {i}/{len(pend)}", flush=True)
+        if not args.daemon:
+            break
+    print("analyzer done")
+
+
 def cmd_spotify_match(args):
     from walkman_dj import spotify_meta
     import json
@@ -189,6 +237,7 @@ def build_parser():
     pmig = sub.add_parser("migrate-analysis"); pmig.add_argument("--analysis"); pmig.set_defaults(func=cmd_migrate_analysis)
     pan = sub.add_parser("analyze"); pan.add_argument("file"); pan.set_defaults(func=cmd_analyze)
     psm = sub.add_parser("spotify-match"); psm.add_argument("query"); psm.set_defaults(func=cmd_spotify_match)
+    pz = sub.add_parser("analyzer"); pz.add_argument("--once", action="store_true"); pz.add_argument("--daemon", action="store_true"); pz.set_defaults(func=cmd_analyzer)
     pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
     po = sub.add_parser("organize"); po.add_argument("--apply", action="store_true"); po.add_argument("--log"); po.set_defaults(func=cmd_organize)
     pe = sub.add_parser("enrich"); pe.add_argument("--analysis"); pe.set_defaults(func=cmd_enrich)
