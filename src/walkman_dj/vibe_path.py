@@ -97,6 +97,38 @@ def prune_transitions(P, idx, pct=90):
     return kept, dropped, thr
 
 
+def curate(rows, prof):
+    """Pick the tracks that fit the profile's vibe: hard tempo gate, then the best
+    `size` by weighted distance to the target vibe. Returns global indices, best-fit first."""
+    lo, hi = prof["bpm"]
+    tgt, w = prof["target"], prof["weights"]
+    scored = []
+    for i, r in enumerate(rows):
+        b = r["bpm"]
+        if not b or b < lo or b > hi:                 # off-tempo / half-time misread -> out
+            continue
+        d = sum(w.get(k, 1.0) * ((float(r[k] if r[k] is not None else 0.0) - t) ** 2)
+                for k, t in tgt.items())
+        scored.append((d ** 0.5, i))
+    scored.sort()
+    return [i for _, i in scored[:prof["size"]]]
+
+
+def order_arc(idx, Xs, rows, template, w_template=0.6, budget=8.0):
+    """Order the selected tracks to follow an energy template (build/peak/cool),
+    balancing transition smoothness against the arc. Starts on the lowest-energy track."""
+    if len(idx) < 2:
+        return list(idx)
+    P = _pair(idx, Xs, rows)
+    raw = [rows[i]["energy"] or 0.0 for i in idx]
+    lo, hi = min(raw), max(raw)
+    en = [(e - lo) / (hi - lo) if hi > lo else 0.5 for e in raw]   # spread for the template
+    start = int(min(range(len(idx)), key=lambda x: en[x]))
+    o = greedy_order(P, en, template, w_template, start=start)
+    o = two_opt(o, P, en, template, w_template, time_budget=budget)
+    return [idx[x] for x in o]
+
+
 def _line(pos, r):
     return (f"{pos}. {r['artist']} - {r['title']} | "
             f"{int(r['bpm']) if r['bpm'] else '?'}bpm {r['camelot'] or '?'} "
@@ -127,30 +159,41 @@ def rationalize(global_order, rows, genre, timeout=600):
         return f"(rationalize skipped: {e})"
 
 
-def run(db, genre, k=1.3, min_conf=0.12, pct=90, do_rationalize=False,
+def run(db, genre, vibe=None, k=1.3, min_conf=0.12, pct=90, do_rationalize=False,
         out_dir="~/Desktop/DJ Sets"):
+    from walkman_dj import profiles
     rows = load(db, genre)
     if len(rows) < 3:
         return {"error": f"only {len(rows)} '{genre}' tracks with vibe data"}
     Xs = matrix(rows)
-    keep, _ = prune_vibe(rows, Xs, k, min_conf)
-    go1, P1, o1 = order(keep, Xs, rows)
-    kept, dropped_trans, thr = prune_transitions(P1, keep, pct)
-    final, _, _ = order(kept, Xs, rows)
+
+    if vibe:                                  # curate toward a set vibe (Boiler Room, etc.)
+        prof = profiles.PROFILES[vibe]
+        sel = curate(rows, prof)
+        final = order_arc(sel, Xs, rows, prof["template"])
+        keep, dropped_trans = sel, []
+        label = f"{genre} — {vibe.replace('_', ' ').title()}"
+    else:                                     # order the whole crate, pruning outliers/isolates
+        keep, _ = prune_vibe(rows, Xs, k, min_conf)
+        go1, P1, o1 = order(keep, Xs, rows)
+        kept, dropped_trans, thr = prune_transitions(P1, keep, pct)
+        final, _, _ = order(kept, Xs, rows)
+        label = f"{genre} — Vibe Path"
 
     out_dir = os.path.expanduser(out_dir)
     os.makedirs(out_dir, exist_ok=True)
-    stem = os.path.join(out_dir, f"{genre} Vibe Path")
+    stem = os.path.join(out_dir, label.replace(" — ", " ").replace("—", "-"))
     with open(stem + ".m3u8", "w") as f:
         f.write("#EXTM3U\n")
         for i in final:
             f.write(f"#EXTINF:0,{rows[i]['artist']} - {rows[i]['title']}\n{rows[i]['path']}\n")
 
-    md = [f"# {genre} — Vibe Path", "",
-          f"- candidates: {len(rows)}  → vibe-kept: {len(keep)}  → "
-          f"transition-kept (master): **{len(final)}**",
-          f"- pruned as vibe-outliers: {len(rows) - len(keep)}; "
-          f"as hard-transition: {len(dropped_trans)}", ""]
+    if vibe:
+        head = f"- {len(rows)} {genre} candidates → curated to **{len(final)}** that fit the {vibe} vibe"
+    else:
+        head = (f"- candidates: {len(rows)} → vibe-kept: {len(keep)} → master: **{len(final)}** "
+                f"(pruned {len(rows) - len(keep)} outliers, {len(dropped_trans)} hard-transition)")
+    md = [f"# {label}", "", head, ""]
     for p, i in enumerate(final, 1):
         r = rows[i]
         nxt = final[p] if p < len(final) else None
@@ -158,9 +201,8 @@ def run(db, genre, k=1.3, min_conf=0.12, pct=90, do_rationalize=False,
                  and rows[nxt]["camelot"] in compatible(r["camelot"]))
         md.append(_line(p, r) + ("  ~key" if keyok else ""))
     if do_rationalize:
-        md += ["", "## DJ rationale (LLM)", "", rationalize(final, rows, genre)]
+        md += ["", "## DJ rationale (LLM)", "", rationalize(final, rows, label)]
     open(stem + ".md", "w").write("\n".join(md) + "\n")
 
-    return {"candidates": len(rows), "vibe_kept": len(keep), "master": len(final),
-            "pruned_vibe": len(rows) - len(keep), "pruned_transition": len(dropped_trans),
+    return {"candidates": len(rows), "selected": len(final), "vibe": vibe or "full",
             "m3u8": stem + ".m3u8", "md": stem + ".md"}

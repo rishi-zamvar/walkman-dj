@@ -35,6 +35,26 @@ def test_prune_transitions_drops_isolated():
     assert set(kept) == {10, 11, 12}
 
 
+def test_curate_gates_tempo_and_picks_best_fit():
+    prof = {"bpm": [128, 140],
+            "target": {"danceability": 0.7, "energy": 0.6, "valence": 0.4,
+                       "acousticness": 0.2, "instrumentalness": 0.7,
+                       "speechiness": 0.1, "liveness": 0.4},
+            "weights": {}, "size": 2, "template": "single_peak"}
+    rows = [
+        _row(0.4, 0.2, 0.7, 0.6, bpm=132),   # 0: on-tempo, on-target -> best
+        _row(0.4, 0.2, 0.7, 0.6, bpm=170),   # 1: on-target but OFF-tempo -> gated out
+        _row(0.9, 0.9, 0.2, 0.1, bpm=134),   # 2: on-tempo but poor fit
+        _row(0.4, 0.2, 0.7, 0.6, bpm=90),    # 3: half-time misread -> gated out
+    ]
+    # add instrumentalness/speechiness fields the profile scores on
+    for r in rows:
+        r["instrumentalness"], r["speechiness"] = 0.7, 0.1
+    sel = vp.curate(rows, prof)
+    assert 1 not in sel and 3 not in sel        # tempo gate removed off-tempo
+    assert sel[0] == 0                          # best fit first
+
+
 def test_edge_penalizes_bpm_and_key_mismatch():
     rows = [_row(0.5, 0.4, 0.5, 0.5, bpm=130, cam="8A"),
             _row(0.5, 0.4, 0.5, 0.5, bpm=130, cam="8A"),   # same key
