@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS runs(
 _FEATURE_COLS = {"status", "bpm", "bpm_raw", "bpm_confidence", "key", "camelot",
                  "key_confidence", "key_agree", "energy", "loudness_curve",
                  "brightness", "bass_weight", "is_vocal", "danceability",
-                 "mix_in", "mix_out", "duration"}
+                 "mix_in", "mix_out", "duration",
+                 # SOTA beatgrid (Beat This! + DeepRhythm)
+                 "beat_anchor", "first_downbeat", "grid_residual", "beat_engine"}
 
 
 class CrateDB:
@@ -35,8 +37,9 @@ class CrateDB:
         self.path = path
 
     def _c(self):
-        c = sqlite3.connect(self.path)
+        c = sqlite3.connect(self.path, timeout=60)
         c.row_factory = sqlite3.Row
+        c.execute("PRAGMA busy_timeout=60000")   # wait, don't fail, under concurrent shards
         return c
 
     def init(self):

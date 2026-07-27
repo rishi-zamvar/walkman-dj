@@ -1,1 +1,1 @@
-{"phase": "analyzing", "total": 755, "done": 75, "workers": 4, "nbatches": 1, "batch": 1, "ts": 1784574286.348306}
+{"phase": "analyzing", "batch": 13, "nbatches": 13, "workers": 10, "done": 2978, "total": 3008, "batch_size": 72, "ts": 1784775164.32856}

@@ -1,4 +1,5 @@
 """MIR feature extraction. Pure functions over (y, sr)."""
+import os
 import numpy as np
 import librosa
 from walkman_dj.camelot import to_camelot
@@ -69,8 +70,11 @@ def energy_timbre_of(y, sr, curve_pts=16) -> dict:
     freqs = librosa.fft_frequencies(sr=sr)
     low = S[freqs < 250].sum()
     bass = float(np.clip(low / (S.sum() + 1e-9), 0, 1))
-    harm, perc = librosa.effects.hpss(y)
-    is_vocal = int(np.mean(np.abs(harm)) > 1.15 * np.mean(np.abs(perc)))
+    if os.environ.get("FAST_ANALYZE"):
+        is_vocal = 0                                 # skip 5.8s hpss (is_vocal over-fires + unused by sequencer)
+    else:
+        harm, perc = librosa.effects.hpss(y)
+        is_vocal = int(np.mean(np.abs(harm)) > 1.15 * np.mean(np.abs(perc)))
     dance = float(np.clip(np.mean(librosa.onset.onset_strength(y=y, sr=sr)) / 5.0, 0, 1))
     return {"energy": round(energy, 3),
             "loudness_curve": [round(float(x), 3) for x in env],
@@ -118,9 +122,9 @@ def analyze_file(path, prior=(70, 180), on_stage=None) -> dict:
             on_stage(s)
     try:
         stage("load")
-        # Hard load cap: never pull more than ~11 min into memory (a long DJ-set
-        # recording would otherwise OOM the machine). Real songs are well under this.
-        y, sr = librosa.load(path, sr=22050, mono=True, duration=660)
+        # Hard load cap: never pull more than 6 min into memory. Real songs fit;
+        # this bounds per-worker RAM so more workers stay safe on an 18 GB machine.
+        y, sr = librosa.load(path, sr=22050, mono=True, duration=360)
         if len(y) < sr * 5:
             return {"status": "failed", "segments": []}
         out = {"status": "ok"}

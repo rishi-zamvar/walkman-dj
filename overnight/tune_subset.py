@@ -70,9 +70,9 @@ def main():
     tracks = load_subset()
     print(f"ground-truth subset: {len(tracks)} tracks over {len(TRUTH_FAMILIES)} families "
           f"({PER_FAMILY}/family target)\n")
-    grid_gw = [0.2, 0.4, 0.7, 1.0, 1.5, 2.0, 3.0]
-    grid_res = [0.8, 1.0, 1.3, 1.7, 2.2]
-    grid_ej = [0.3, 0.5, 0.8]
+    grid_gw = [1.0, 2.0]
+    grid_res = [1.7, 2.2, 2.8, 3.5, 4.5]
+    grid_ej = [0.3, 0.5]
     print(f"{'gW':>5} {'res':>5} {'eJump':>6} {'#comm':>6} {'ARI':>6} {'homog':>6} {'compl':>6}")
     best = None; t0 = time.time(); runs = 0
     for gw in grid_gw:

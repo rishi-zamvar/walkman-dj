@@ -107,7 +107,8 @@ bpm_prior = [110, 130]
 
 [families.baile_edits]
 artist_keywords = ["Furacão 2000","Tati Quebra","MC Fioti","Papatinho","Deekapz","MC GW",
-  "Furacao"]
-filename_keywords = ["baile","edit","funk remix","funk edit","Lai On Da Track","Y3llO","Klean",
-  "brazilian funk"]
+  "Furacao","MC Menor","MC L","Mc Gw"]
+# strict baile signals only — NOT generic "edit"/"remix" (those swept in rap bootlegs)
+filename_keywords = ["baile","favela","funk brasil","brazilian funk","Lai On Da Track",
+  "Y3llO","baile funk","funk remix"]
 bpm_prior = [125, 150]

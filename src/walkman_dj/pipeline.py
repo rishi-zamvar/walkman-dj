@@ -94,8 +94,8 @@ def fallback_family(t):
         return "jersey_juke"          # juke / footwork / jungle range
     if bpm >= 143:
         return "ukg_bass"             # UK garage / bass
-    if bpm >= 132:
-        return "baile_edits"          # baile / hard edits
+    if bpm >= 130:
+        return "club_edits"           # generic 130-143 rap/pop bootlegs & edits (NOT baile)
     if bpm >= 126:
         return "tech_house"
     if bpm >= 120:

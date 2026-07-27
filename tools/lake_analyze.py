@@ -14,7 +14,7 @@ DB = os.path.join(ROOT, "data", "walkman_analysis.db")
 CFG = os.path.join(ROOT, "config", "genre_rules.toml")
 LAKE = "/Users/rishizamvar/Desktop/MusicLake"
 AUDIO = (".mp3", ".flac", ".m4a", ".wav", ".aac", ".aiff", ".aif", ".ogg")
-WORKERS = 4               # 18 GB machine — keep concurrent audio loads bounded
+WORKERS = 9               # safe with the 6-min load cap (~0.9GB/worker -> ~8GB for 9)
 MAX_DUR = 600            # skip anything > 10 min (DJ set recordings, mixes, GoPro)
 MAX_MB = 130             # size guard (fast path before reading duration)
 

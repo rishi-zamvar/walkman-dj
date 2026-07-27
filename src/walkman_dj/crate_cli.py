@@ -13,7 +13,7 @@ import os, sys, argparse, subprocess, tempfile, glob
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from walkman_dj import crate
 
-ROOT = os.environ.get("CRATE_ROOT", os.path.expanduser("~/Desktop/MusicLake"))
+ROOT = os.environ.get("CRATE_ROOT", os.path.expanduser("~/Documents/MusicLake"))
 DB = os.environ.get("CRATE_DB", os.path.join(os.path.dirname(__file__), "..", "..", "data", "library.db"))
 
 

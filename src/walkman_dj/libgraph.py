@@ -42,6 +42,31 @@ def _key_reliable(t, cfg):
     return (t.get("key_agree", True) is not False) and (t.get("key_confidence") or 0) >= cfg["key_conf_min"]
 
 
+# Genre adjacency — families that genuinely bridge in DJ sets. "adjacent" scope keeps
+# communities genre-aware (mostly-pure) while allowing NATURAL bridges only between
+# compatible families (not the hard-gate 100% purity, not the soft-mode 37% mush).
+# Tightened to the STRONGEST, most-natural DJ bridges only → mostly-pure communities
+# (85-90% single-genre) with a few genuine cross-genre bridges, per the brief.
+_ADJ_PAIRS = [
+    ("tech_house", "organic_house"), ("tech_house", "nu_disco"),
+    ("ukg_bass", "jungle_dnb"), ("jersey_juke", "baile_edits"),
+    ("atlanta_trap", "opium_rage"), ("melodic_trap", "opium_rage"),
+    ("toronto", "lyrical_soul"), ("lyrical_soul", "alt_rnb"),
+]
+_ADJ = {}
+for _x, _y in _ADJ_PAIRS:
+    _ADJ.setdefault(_x, set()).add(_y); _ADJ.setdefault(_y, set()).add(_x)
+
+
+def _families_bridge(fa, fb):
+    """same family, or an allowed adjacent bridge (base family, ignoring sub-split suffix)."""
+    if fa == fb:
+        return True
+    ba = (fa or "").split("_rage")[0].split("_melodic")[0]
+    bb = (fb or "").split("_rage")[0].split("_melodic")[0]
+    return bb in _ADJ.get(ba, ()) or fb in _ADJ.get(fa, ())
+
+
 def build_graph(tracks, cfg):
     """networkx.Graph over tracks. Edge iff harmonic + BPM compatible; weight is
     affinity = 1/(1+cost), cost = smoothness + w_genre_bridge*(1 - genre_jaccard).
@@ -53,7 +78,9 @@ def build_graph(tracks, cfg):
         G.add_node(t["fingerprint"], family=t.get("family"), bpm=t.get("bpm"),
                    energy=t.get("energy"), camelot=t.get("camelot"),
                    canon=t.get("canon_genre"))
-    hard_scope = cfg.get("genre_scope") == "hard"
+    scope = cfg.get("genre_scope")
+    hard_scope = scope == "hard"
+    adjacent_scope = scope == "adjacent"
     ab_gate = cfg.get("ab_gate")
     for i, j in candidate_pairs(tracks, cfg["bpm_window_pct"], cfg["bpm_window_floor"]):
         a, b = tracks[i], tracks[j]
@@ -61,6 +88,8 @@ def build_graph(tracks, cfg):
             continue                              # A/B gate: vocal/rap never mixes with music-forward
         if hard_scope and a.get("family") != b.get("family"):
             continue                              # genre-pure: no cross-genre edges
+        if adjacent_scope and not _families_bridge(a.get("family"), b.get("family")):
+            continue                              # genre-aware: bridge only between compatible families
         key_ok = camelot_edge_ok(a.get("camelot"), b.get("camelot"), cfg["allow_energy_boost"])
         key_unrel = not (_key_reliable(a, cfg) and _key_reliable(b, cfg))
         if not key_ok and not key_unrel:
