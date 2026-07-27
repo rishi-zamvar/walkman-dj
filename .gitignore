@@ -18,3 +18,4 @@ data/live/
 data/server.log
 data/run.log
 REPORT.md
+.git.nosync/
