@@ -228,9 +228,18 @@ def cmd_analyzer(args):
         schema.dequeue(DB, fp)
         return True
 
+    # optional "i/N" sharding so N workers process disjoint slices with no contention
+    shard_i, shard_n = None, None
+    if getattr(args, "shard", None):
+        import zlib
+        shard_i, shard_n = (int(x) for x in args.shard.split("/"))
+
+    def _mine(fp):
+        return shard_n is None or zlib.crc32(fp.encode()) % shard_n == shard_i
+
     while True:
-        pend = [(fp, p) for fp, p in schema.pending(DB, 500)
-                if sqlite3.connect(DB).execute(
+        pend = [(fp, p) for fp, p in schema.pending(DB, 2000)
+                if _mine(fp) and sqlite3.connect(DB).execute(
                     "SELECT attempts FROM pending_analysis WHERE fingerprint=?", (fp,)).fetchone()[0] < 3]
         if not pend:
             if args.daemon:
@@ -288,7 +297,7 @@ def build_parser():
     pmig = sub.add_parser("migrate-analysis"); pmig.add_argument("--analysis"); pmig.set_defaults(func=cmd_migrate_analysis)
     pan = sub.add_parser("analyze"); pan.add_argument("file"); pan.set_defaults(func=cmd_analyze)
     psm = sub.add_parser("spotify-match"); psm.add_argument("query"); psm.set_defaults(func=cmd_spotify_match)
-    pz = sub.add_parser("analyzer"); pz.add_argument("--once", action="store_true"); pz.add_argument("--daemon", action="store_true"); pz.set_defaults(func=cmd_analyzer)
+    pz = sub.add_parser("analyzer"); pz.add_argument("--once", action="store_true"); pz.add_argument("--daemon", action="store_true"); pz.add_argument("--shard", help="i/N: process only shard i of N (parallel workers)"); pz.set_defaults(func=cmd_analyzer)
     sub.add_parser("backfill-genre").set_defaults(func=cmd_backfill_genre)
     sub.add_parser("backfill").set_defaults(func=cmd_backfill)
     pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
