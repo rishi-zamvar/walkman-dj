@@ -159,6 +159,20 @@ def cmd_backfill(args):
     print(f"enqueued {n} songs for analysis — run: crate analyzer --once")
 
 
+def cmd_backfill_genre(args):
+    """Enqueue every row missing a genre (incl. already-analyzed rows) so the
+    analyzer adds genre/valence and re-runs the fixed acousticness."""
+    import sqlite3
+    from walkman_dj import schema
+    schema.ensure_schema(DB)
+    n = 0
+    with sqlite3.connect(DB) as c:
+        rows = c.execute("SELECT fp, canonical_path FROM recordings WHERE genre IS NULL").fetchall()
+        for fp, path in rows:
+            schema.enqueue(DB, fp, path); n += 1
+    print(f"enqueued {n} songs for genre backfill — run: crate analyzer --daemon")
+
+
 def cmd_analyzer(args):
     import sqlite3, time
     from walkman_dj import schema, intelligence, spotify_meta
@@ -275,6 +289,7 @@ def build_parser():
     pan = sub.add_parser("analyze"); pan.add_argument("file"); pan.set_defaults(func=cmd_analyze)
     psm = sub.add_parser("spotify-match"); psm.add_argument("query"); psm.set_defaults(func=cmd_spotify_match)
     pz = sub.add_parser("analyzer"); pz.add_argument("--once", action="store_true"); pz.add_argument("--daemon", action="store_true"); pz.set_defaults(func=cmd_analyzer)
+    sub.add_parser("backfill-genre").set_defaults(func=cmd_backfill_genre)
     sub.add_parser("backfill").set_defaults(func=cmd_backfill)
     pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
     po = sub.add_parser("organize"); po.add_argument("--apply", action="store_true"); po.add_argument("--log"); po.set_defaults(func=cmd_organize)
