@@ -23,16 +23,37 @@ def test_prune_vibe_drops_outlier_and_low_conf():
 
 
 def test_prune_transitions_drops_isolated():
-    # a 4-node path where node with local index 3 is far from everyone
-    P = [[0, 1, 1, 9],
-         [1, 0, 1, 9],
-         [1, 1, 0, 9],
-         [9, 9, 9, 0]]
+    # node 3 has no valid edge (all INVALID) -> can't cleanly mix with anything
+    I = vp.INVALID
+    P = [[0, 1, 1, I],
+         [1, 0, 1, I],
+         [1, 1, 0, I],
+         [I, I, I, 0]]
     idx = [10, 11, 12, 13]
-    order = [0, 1, 2, 3]
-    kept, dropped, thr = vp.prune_transitions(P, idx, pct=75)
+    kept, dropped, thr = vp.prune_transitions(P, idx)
     assert 13 in dropped and 13 not in kept
     assert set(kept) == {10, 11, 12}
+
+
+def test_transition_gates_bpm_and_key():
+    base = {"bpm": 132, "camelot": "8A", "energy": 0.6, "danceability": 0.5,
+            "bass_weight": 0.5, "brightness": 0.5}
+    ok = dict(base)                                   # identical -> valid, high conf
+    off_bpm = dict(base, bpm=160)                     # bpm gate fails
+    off_key = dict(base, camelot="3B")                # key gate fails
+    assert vp.transition(base, ok) < vp.INVALID
+    assert vp.transition(base, off_bpm) == vp.INVALID
+    assert vp.transition(base, off_key) == vp.INVALID
+
+
+def test_clean_chain_drops_hard_cut():
+    a = {"bpm": 132, "camelot": "8A", "energy": 0.6, "danceability": 0.5,
+         "bass_weight": 0.5, "brightness": 0.5}
+    b = dict(a, camelot="9A")                         # 8A->9A harmonic, valid
+    c = dict(a, bpm=175, camelot="3B")               # mixes with neither
+    rows = [a, b, c]
+    kept, dropped = vp.clean_chain([0, 1, 2], rows)
+    assert kept == [0, 1] and dropped == [2]
 
 
 def test_curate_gates_tempo_and_picks_best_fit():

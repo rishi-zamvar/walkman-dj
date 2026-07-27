@@ -28,7 +28,7 @@ def load(db, genre):
         """SELECT title, artist, bpm, camelot, energy, valence, acousticness,
                   essentia_danceability AS danceability, speechiness,
                   instrumentalness, liveness, genre_confidence, genre_source,
-                  subgenre, canonical_path AS path
+                  subgenre, bass_weight, brightness, canonical_path AS path
            FROM recordings WHERE genre=? AND valence IS NOT NULL""", (genre,))]
 
 
@@ -51,23 +51,57 @@ def prune_vibe(rows, Xs, k=1.3, min_conf=0.12):
     return keep, dist
 
 
-def edge(i, j, Xs, rows):
-    """Transitionability cost: vibe distance + BPM gap + harmonic-key penalty."""
-    d = float(np.linalg.norm(Xs[i] - Xs[j]))
-    a, b = rows[i], rows[j]
-    if a["bpm"] and b["bpm"]:
-        d += min(abs(a["bpm"] - b["bpm"]) / 8.0, 3.0)
-    if a["camelot"] and b["camelot"]:
-        d += 0.0 if b["camelot"] in compatible(a["camelot"]) else 0.8
-    return d
+# --- Transition model: two AND-gates (bpm, key) + a drum/energy confidence score.
+# A pair is mixable only if bpm-in-range AND key-harmonic AND drum/energy conf >= thresh.
+# Otherwise there is no clean edge (INVALID cost). Vibe features are NOT used here —
+# they only decide which tracks are SELECTED into the set (see curate()).
+INVALID = 1000.0
+BPM_PCT = 0.06        # ±6% mixable window (with pitch adjust)
+BPM_FLOOR = 3.0
+DRUM_MIN = 0.60       # min drum/energy similarity confidence to allow a mix
+DRUM_FEATS = ["energy", "danceability", "bass_weight", "brightness"]
 
 
-def _pair(idx, Xs, rows):
+def bpm_in_range(a, b, pct=BPM_PCT, floor=BPM_FLOOR):
+    ba, bb = a.get("bpm"), b.get("bpm")
+    if not ba or not bb:
+        return False
+    win = max(ba * pct, floor)
+    return any(abs(ba - m) <= win for m in (bb, bb * 2, bb / 2))   # incl. half/double-time
+
+
+def key_harmonic(a, b):
+    return bool(a.get("camelot") and b.get("camelot")
+                and b["camelot"] in compatible(a["camelot"]))
+
+
+def drum_energy_conf(a, b):
+    """1 - mean absolute difference over drum/energy features (all ~0..1)."""
+    diffs = [abs(a[k] - b[k]) for k in DRUM_FEATS
+             if a.get(k) is not None and b.get(k) is not None]
+    return 1.0 - sum(diffs) / len(diffs) if diffs else 0.0
+
+
+def transition(a, b, pct=BPM_PCT, drum_min=DRUM_MIN):
+    """Cost of mixing a->b: 1-confidence if all gates pass, else INVALID."""
+    if not bpm_in_range(a, b, pct) or not key_harmonic(a, b):
+        return INVALID
+    conf = drum_energy_conf(a, b)
+    if conf < drum_min:
+        return INVALID
+    return 1.0 - conf                    # lower cost = higher-confidence transition
+
+
+def edge(i, j, Xs, rows):               # kept for callers/tests; Xs unused now
+    return transition(rows[i], rows[j])
+
+
+def _pair(idx, Xs, rows, pct=BPM_PCT, drum_min=DRUM_MIN):
     n = len(idx)
     P = [[0.0] * n for _ in range(n)]
     for x in range(n):
         for y in range(x + 1, n):
-            w = edge(idx[x], idx[y], Xs, rows)
+            w = transition(rows[idx[x]], rows[idx[y]], pct, drum_min)
             P[x][y] = P[y][x] = w
     return P
 
@@ -84,22 +118,35 @@ def order(idx, Xs, rows, budget=8.0):
 
 
 def prune_transitions(P, idx, pct=90):
-    """Drop tracks that don't cleanly transition with ANYTHING: their nearest-neighbor
-    edge (best possible mix over the whole set) sits above the pct-th percentile."""
+    """Drop tracks that can't cleanly mix with ANYTHING (no valid edge to any other)."""
     n = len(P)
     if n < 3:
         return list(idx), [], 0.0
-    nn = [min(P[i][j] for j in range(n) if j != i) for i in range(n)]
-    thr = float(np.percentile(nn, pct))
-    drop = {i for i in range(n) if nn[i] > thr}
+    drop = {i for i in range(n)
+            if min((P[i][j] for j in range(n) if j != i), default=INVALID) >= INVALID}
     kept = [idx[i] for i in range(n) if i not in drop]
     dropped = [idx[i] for i in drop]
-    return kept, dropped, thr
+    return kept, dropped, INVALID
 
 
-def curate(rows, prof):
+def clean_chain(global_order, rows):
+    """Keep the run where every consecutive mix is valid; thread past any track whose
+    incoming mix would be a hard cut. Returns (kept, dropped) global indices."""
+    if not global_order:
+        return [], []
+    kept = [global_order[0]]
+    dropped = []
+    for i in global_order[1:]:
+        if transition(rows[kept[-1]], rows[i]) < INVALID:
+            kept.append(i)
+        else:
+            dropped.append(i)
+    return kept, dropped
+
+
+def curate(rows, prof, count=None):
     """Pick the tracks that fit the profile's vibe: hard tempo gate, then the best
-    `size` by weighted distance to the target vibe. Returns global indices, best-fit first."""
+    `count` by weighted distance to the target vibe. Returns global indices, best-fit first."""
     lo, hi = prof["bpm"]
     tgt, w = prof["target"], prof["weights"]
     scored = []
@@ -111,7 +158,7 @@ def curate(rows, prof):
                 for k, t in tgt.items())
         scored.append((d ** 0.5, i))
     scored.sort()
-    return [i for _, i in scored[:prof["size"]]]
+    return [i for _, i in scored[:count or prof["size"]]]
 
 
 def order_arc(idx, Xs, rows, template, w_template=0.6, budget=8.0):
@@ -169,9 +216,12 @@ def run(db, genre, vibe=None, k=1.3, min_conf=0.12, pct=90, do_rationalize=False
 
     if vibe:                                  # curate toward a set vibe (Boiler Room, etc.)
         prof = profiles.PROFILES[vibe]
-        sel = curate(rows, prof)
-        final = order_arc(sel, Xs, rows, prof["template"])
-        keep, dropped_trans = sel, []
+        size = prof["size"]
+        pool = curate(rows, prof, count=int(size * 1.8))     # over-select; chain-prune trims
+        ordered = order_arc(pool, Xs, rows, prof["template"])
+        chain, dropped_trans = clean_chain(ordered, rows)    # keep only clean mixes
+        final = chain[:size]
+        keep = pool
         label = f"{genre} — {vibe.replace('_', ' ').title()}"
     else:                                     # order the whole crate, pruning outliers/isolates
         keep, _ = prune_vibe(rows, Xs, k, min_conf)
