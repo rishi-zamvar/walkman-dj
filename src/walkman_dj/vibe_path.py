@@ -105,16 +105,20 @@ def _line(pos, r):
             f"[{r['subgenre'] or r['genre_source']}]")
 
 
-def rationalize(global_order, rows, genre, timeout=240):
-    """Shell to `claude -p`: rationalize each transition + song choice, flag misfits."""
+def rationalize(global_order, rows, genre, timeout=600):
+    """Shell to `claude -p`: rationalize the arc, flag the rough transitions + misfit songs."""
     body = "\n".join(_line(p, rows[i]) for p, i in enumerate(global_order, 1))
     prompt = (
-        f"You are a veteran {genre} DJ reviewing a machine-ordered set. The tracks were "
-        "ordered by a transitionability algorithm (vibe distance + BPM + harmonic key). "
-        "For EACH transition N->N+1, give a one-line verdict on whether the BPM/key/energy/"
-        "vibe flow actually works, and flag any that would clang. Then flag any SONG that "
-        "doesn't belong in this set at all. Finish with a one-paragraph overall verdict and "
-        "the 3 weakest spots to fix.\n\nSET:\n" + body)
+        f"You are a veteran {genre} DJ reviewing a machine-ordered set ({len(global_order)} "
+        "tracks, ordered by a transitionability algorithm: vibe distance + BPM + harmonic key). "
+        "Don't review every transition. Instead give me:\n"
+        "1. ARC: 2-3 sentences on how the energy/tempo journey reads overall.\n"
+        "2. ROUGH SPOTS: the ~8 worst transitions by track number (e.g. '#47->48'), each with "
+        "one line on why it clangs (tempo jump, key clash, energy drop) and a quick fix.\n"
+        "3. MISFITS: any songs that don't belong in a "
+        f"{genre} set at all, by number.\n"
+        "4. VERDICT: one paragraph — is this a playable set, and the single biggest improvement.\n\n"
+        "SET:\n" + body)
     try:
         out = subprocess.run(["claude", "-p"], input=prompt,
                              capture_output=True, text=True, timeout=timeout)
