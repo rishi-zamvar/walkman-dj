@@ -4,7 +4,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from walkman_dj import crate  # noqa: E402
 
-LAKE = os.path.expanduser("~/Desktop/MusicLake")
+LAKE = os.path.expanduser("~/Documents/MusicLake")
 
 
 def _a_flac(tmp_path, name="song.flac"):
@@ -77,6 +77,20 @@ def test_enrich_copies_bpm_by_artist_title(tmp_path):
     with lib._c() as c:
         row = c.execute("SELECT bpm,camelot,family FROM recordings WHERE akey='kencarsonyale'").fetchone()
     assert round(row["bpm"]) == 151 and row["camelot"] == "8A" and row["family"] == "opium_rage"
+
+
+def test_ingest_files_album_track_into_nested_canonical_layout(tmp_path):
+    import mutagen
+    root = tmp_path / "lib"; root.mkdir()
+    src = _a_flac(tmp_path, name="random.flac")
+    m = mutagen.File(src, easy=True)
+    m["albumartist"] = ["Some Artist"]; m["album"] = ["Some Album"]; m["title"] = ["A Track"]; m["tracknumber"] = ["3"]
+    m.save()
+    lib = crate.CrateLib(str(tmp_path / "db.sqlite"), str(root))
+    r = lib.ingest(src)
+    # must be nested AlbumArtist/Album/NN - Title, NOT flat "Artist - Album"
+    assert r.canonical.endswith("/Some Artist/Some Album/03 - A Track.flac"), r.canonical
+    assert " - Some Album/" not in r.canonical
 
 
 def test_normalize_tags_survives_corrupt_file(tmp_path):

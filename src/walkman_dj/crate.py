@@ -265,12 +265,21 @@ class CrateLib:
 
     # --- filing ---
     def _dest_for(self, path: str) -> str:
-        artist, _, album = tags(path)
-        folder = f"{artist} - {album}" if (artist and album) else (artist or "Singles")
-        folder = re.sub(r'[/:]', "-", folder).strip() or "Singles"
-        d = os.path.join(self.root, folder)
-        os.makedirs(d, exist_ok=True)
-        return os.path.join(d, os.path.basename(path))
+        """Canonical destination — SAME layout as organize(): album-tagged tracks go to
+        <AlbumArtist>/<Album>/NN - Title, true singles to _Singles/<Artist>/Title."""
+        import mutagen
+        tg = normalize_tags(path, write=False)
+        tn = None
+        try:
+            mm = mutagen.File(path, easy=True)
+        except Exception:
+            mm = None
+        if mm and mm.get("tracknumber"):
+            raw = str(mm["tracknumber"][0]).split("/")[0]
+            tn = int(raw) if raw.isdigit() else None
+        dest = canonical_path(self.root, path, tg, tracknum=tn)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        return dest
 
     def ingest(self, path: str, into_library: bool = True) -> IngestResult:
         """Fingerprint `path`; if it already exists keep the higher-quality copy and Trash
