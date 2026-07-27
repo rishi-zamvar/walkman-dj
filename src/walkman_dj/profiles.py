@@ -21,7 +21,8 @@ PROFILES = {
         "weights": {"danceability": 1.5, "energy": 1.1, "valence": 0.7,
                     "acousticness": 1.3, "instrumentalness": 1.4,
                     "speechiness": 1.6, "liveness": 0.4},
-        "size": 32,
+        "size": 45,
+        "pool": 120,
         "template": "single_peak",
     },
 }

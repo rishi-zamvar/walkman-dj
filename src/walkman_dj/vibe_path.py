@@ -129,6 +129,47 @@ def prune_transitions(P, idx, pct=90):
     return kept, dropped, INVALID
 
 
+def harmonic_path(idx, rows, pct=BPM_PCT, drum_min=DRUM_MIN):
+    """Build the longest chain where EVERY consecutive mix is valid. Greedy bidirectional
+    extend (lowest-cost valid neighbour off each end) then an insertion pass that slots any
+    remaining track between a compatible pair — recovers tracks a single-pass chain strands."""
+    valid = {i: {j: transition(rows[i], rows[j], pct, drum_min) for j in idx
+                 if j != i and transition(rows[i], rows[j], pct, drum_min) < INVALID}
+             for i in idx}
+    connected = [i for i in idx if valid[i]]
+    if not connected:
+        return list(idx[:1])
+    start = min(connected, key=lambda i: rows[i]["energy"] or 0.0)   # open on lowest energy
+    chain, used = [start], {start}
+
+    def grow(at_tail):
+        while True:
+            end = chain[-1] if at_tail else chain[0]
+            cands = [(c, j) for j, c in valid[end].items() if j not in used]
+            if not cands:
+                return
+            _, j = min(cands)
+            used.add(j)
+            chain.append(j) if at_tail else chain.insert(0, j)
+
+    grow(True); grow(False)
+    changed = True
+    while changed:                                   # insertion: absorb the rest of the component
+        changed = False
+        for x in idx:
+            if x in used:
+                continue
+            for p in range(len(chain) - 1):
+                if chain[p + 1] in valid[x] and chain[p] in valid[x]:
+                    chain.insert(p + 1, x); used.add(x); changed = True; break
+            else:
+                if chain[-1] in valid[x]:
+                    chain.append(x); used.add(x); changed = True
+                elif chain[0] in valid[x]:
+                    chain.insert(0, x); used.add(x); changed = True
+    return chain
+
+
 def clean_chain(global_order, rows):
     """Keep the run where every consecutive mix is valid; thread past any track whose
     incoming mix would be a hard cut. Returns (kept, dropped) global indices."""
@@ -217,11 +258,10 @@ def run(db, genre, vibe=None, k=1.3, min_conf=0.12, pct=90, do_rationalize=False
     if vibe:                                  # curate toward a set vibe (Boiler Room, etc.)
         prof = profiles.PROFILES[vibe]
         size = prof["size"]
-        pool = curate(rows, prof, count=int(size * 1.8))     # over-select; chain-prune trims
-        ordered = order_arc(pool, Xs, rows, prof["template"])
-        chain, dropped_trans = clean_chain(ordered, rows)    # keep only clean mixes
+        pool = curate(rows, prof, count=prof.get("pool", size * 3))   # wide vibe-fit pool
+        chain = harmonic_path(pool, rows)                    # longest all-harmonic chain
         final = chain[:size]
-        keep = pool
+        keep, dropped_trans = pool, [i for i in pool if i not in chain]
         label = f"{genre} — {vibe.replace('_', ' ').title()}"
     else:                                     # order the whole crate, pruning outliers/isolates
         keep, _ = prune_vibe(rows, Xs, k, min_conf)

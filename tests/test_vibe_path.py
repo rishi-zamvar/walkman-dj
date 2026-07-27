@@ -46,6 +46,18 @@ def test_transition_gates_bpm_and_key():
     assert vp.transition(base, off_key) == vp.INVALID
 
 
+def test_harmonic_path_absorbs_whole_component():
+    # 8A-9A-10A-11A: a stepwise-harmonic ladder, all same tempo/drums -> one chain of 4
+    def t(cam):
+        return {"bpm": 132, "camelot": cam, "energy": 0.5, "danceability": 0.5,
+                "bass_weight": 0.5, "brightness": 0.5}
+    rows = [t("8A"), t("9A"), t("10A"), t("11A")]
+    path = vp.harmonic_path([0, 1, 2, 3], rows)
+    assert set(path) == {0, 1, 2, 3}                       # none stranded
+    for p in range(len(path) - 1):                          # every mix valid
+        assert vp.transition(rows[path[p]], rows[path[p + 1]]) < vp.INVALID
+
+
 def test_clean_chain_drops_hard_cut():
     a = {"bpm": 132, "camelot": "8A", "energy": 0.6, "danceability": 0.5,
          "bass_weight": 0.5, "brightness": 0.5}
