@@ -57,11 +57,10 @@ def embedding(path: str):
         return None
 
 
-def predict(path: str) -> dict:
-    """{'genre','subgenre','genre_confidence'} from the Discogs-400 head, or {}."""
+def predict_from_embedding(emb) -> dict:
+    """{'genre','subgenre','genre_confidence'} from a precomputed EffNet embedding."""
     from walkman_dj import genre_map
-    emb = embedding(path)
-    if emb is None:
+    if emb is None or not _load():
         return {}
     try:
         import numpy as np
@@ -74,3 +73,8 @@ def predict(path: str) -> dict:
                 "genre_confidence": round(float(avg[idx]), 3)}
     except Exception:
         return {}
+
+
+def predict(path: str) -> dict:
+    """{'genre','subgenre','genre_confidence'} from the Discogs-400 head, or {}."""
+    return predict_from_embedding(embedding(path))

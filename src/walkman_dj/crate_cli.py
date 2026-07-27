@@ -188,6 +188,20 @@ def cmd_analyzer(args):
                 r.update(spotify_meta.match(tr["artist"] or "", tr["title"] or "", tr["duration"]))
             except Exception:
                 pass
+        # genre + valence share one EffNet embedding
+        try:
+            from walkman_dj import genre_audio, genre_label
+            from mutagen import File as _MF
+            emb = genre_audio.embedding(path)
+            audio_g = genre_audio.predict_from_embedding(emb)
+            tags = _MF(path, easy=True) or {}
+            r.update(genre_label.label_track(path, tags, audio_g))
+            from walkman_dj import mood
+            v = mood.valence_from_embedding(emb)
+            if v is not None:
+                r["valence"] = v
+        except Exception:
+            pass
         segs = r.pop("segments", [])
         fields = {k: v for k, v in r.items() if k in _FEAT}
         sets = ",".join(f"{k}=?" for k in fields)

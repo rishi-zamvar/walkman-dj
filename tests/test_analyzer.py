@@ -31,12 +31,20 @@ def test_analyzer_drains_queue_and_writes_row(tmp_path, monkeypatch):
     fp = sqlite3.connect(db).execute("SELECT fingerprint FROM pending_analysis").fetchone()[0]
     import walkman_dj.intelligence as I
     import walkman_dj.spotify_meta as sm
+    import walkman_dj.genre_audio as ga
+    import walkman_dj.mood as mood
     monkeypatch.setattr(I, "analyze_song", lambda p: {
         "status": "ok", "bpm": 140.0, "camelot": "8A", "energy": 0.6,
         "analysis_version": "si-1.0", "segments": []})
     monkeypatch.setattr(sm, "match", lambda *a, **k: {"spotify_id": "sp", "spotify_popularity": 50})
+    monkeypatch.setattr(ga, "embedding", lambda p: "EMB")
+    monkeypatch.setattr(ga, "predict_from_embedding", lambda e: {
+        "genre": "Jersey Club", "subgenre": "Jersey Club", "genre_confidence": 0.4})
+    monkeypatch.setattr(mood, "valence_from_embedding", lambda e: 0.7)
     crate_cli.DB = db
     crate_cli.main(["analyzer", "--once"])
-    row = sqlite3.connect(db).execute("SELECT bpm,camelot,spotify_id FROM recordings WHERE fp=?", (fp,)).fetchone()
+    row = sqlite3.connect(db).execute(
+        "SELECT bpm,camelot,spotify_id,genre,valence FROM recordings WHERE fp=?", (fp,)).fetchone()
     assert round(row[0]) == 140 and row[1] == "8A" and row[2] == "sp"
+    assert row[3] and row[4] == 0.7  # a genre was written; valence from mood head
     assert schema.pending(db) == []
