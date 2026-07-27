@@ -146,6 +146,12 @@ def cmd_verify(args):
     print(_lib().verify())
 
 
+def cmd_analyze(args):
+    from walkman_dj import intelligence
+    import json
+    print(json.dumps(intelligence.analyze_song(args.file), indent=1, default=str))
+
+
 def cmd_migrate_analysis(args):
     from walkman_dj import schema
     schema.ensure_schema(DB)
@@ -174,6 +180,7 @@ def build_parser():
     sub.add_parser("stats").set_defaults(func=cmd_stats)
     sub.add_parser("verify").set_defaults(func=cmd_verify)
     pmig = sub.add_parser("migrate-analysis"); pmig.add_argument("--analysis"); pmig.set_defaults(func=cmd_migrate_analysis)
+    pan = sub.add_parser("analyze"); pan.add_argument("file"); pan.set_defaults(func=cmd_analyze)
     pt = sub.add_parser("tagfix"); pt.add_argument("files", nargs="+"); pt.add_argument("--write", action="store_true"); pt.set_defaults(func=cmd_tagfix)
     po = sub.add_parser("organize"); po.add_argument("--apply", action="store_true"); po.add_argument("--log"); po.set_defaults(func=cmd_organize)
     pe = sub.add_parser("enrich"); pe.add_argument("--analysis"); pe.set_defaults(func=cmd_enrich)
