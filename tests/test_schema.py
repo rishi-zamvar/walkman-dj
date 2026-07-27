@@ -11,7 +11,7 @@ def test_ensure_schema_adds_columns_idempotently(tmp_path):
     schema.ensure_schema(db)
     schema.ensure_schema(db)  # idempotent
     cols = {r[1] for r in sqlite3.connect(db).execute("PRAGMA table_info(recordings)")}
-    for expected in ("valence", "acousticness", "spotify_id", "bpm", "camelot", "analysis_version", "loudness_db"):
+    for expected in ("valence", "acousticness", "spotify_id", "bpm", "camelot", "analysis_version", "loudness_db", "genre", "genre_source"):
         assert expected in cols
     tabs = {r[0] for r in sqlite3.connect(db).execute("SELECT name FROM sqlite_master WHERE type='table'")}
     assert "pending_analysis" in tabs and "segments" in tabs

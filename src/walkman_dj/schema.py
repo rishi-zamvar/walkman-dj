@@ -15,6 +15,9 @@ NEW_COLUMNS = [
     ("mix_in", "REAL"), ("mix_out", "REAL"), ("beat_anchor", "REAL"),
     ("first_downbeat", "REAL"), ("beat_engine", "TEXT"),
     ("spotify_key", "INTEGER"), ("spotify_mode", "INTEGER"),
+    # genre (normalized embedded tag + Discogs-400 audio classifier)
+    ("genre", "TEXT"), ("subgenre", "TEXT"), ("genre_source", "TEXT"),
+    ("genre_confidence", "REAL"),
     # essentia spotify-parity
     ("valence", "REAL"), ("acousticness", "REAL"), ("instrumentalness", "REAL"),
     ("speechiness", "REAL"), ("liveness", "REAL"), ("loudness_db", "REAL"),
