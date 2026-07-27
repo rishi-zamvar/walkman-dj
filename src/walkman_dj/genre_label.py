@@ -16,8 +16,9 @@ _REMIX = re.compile(
     r"\b(remix|edit|bootleg|flip|vip|mashup|refix|rework|re-?edit|dub mix)\b|\(.*\bdub\b.*\)",
     re.IGNORECASE)
 
-_REMIX_MIN = 0.15   # audio confidence needed to override a tag on a remix
-_AUDIO_MIN = 0.10   # audio confidence needed to beat a missing/generic tag
+_REMIX_MIN = 0.40   # audio confidence needed to override a tag on a remix
+_AUDIO_MIN = 0.50   # audio confidence needed to commit a genre / beat a generic tag
+                    # below this the model is guessing — fall back to the tag, else "Other"
 
 
 def is_remix(name: str) -> bool:

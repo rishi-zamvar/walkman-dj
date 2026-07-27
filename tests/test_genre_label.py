@@ -2,10 +2,11 @@ import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from walkman_dj import genre_label as G
 
-AUDIO = {"genre": "Jersey Club", "subgenre": "Jersey Club", "genre_confidence": 0.4}
+AUDIO = {"genre": "Jersey Club", "subgenre": "Jersey Club", "genre_confidence": 0.6}   # confident
+LOWAUDIO = {"genre": "Jersey Club", "subgenre": "Jersey Club", "genre_confidence": 0.4}  # unsure
 
 
-def test_remix_prefers_audio_over_tag():
+def test_remix_prefers_confident_audio_over_tag():
     r = G.decide("Pop", AUDIO, remix=True)
     assert r["genre"] == "Jersey Club" and r["genre_source"] == "audio"
 
@@ -15,19 +16,25 @@ def test_specific_tag_wins_when_not_remix():
     assert r["genre"] == "Hip-Hop" and r["genre_source"] == "tag"
 
 
-def test_generic_tag_refined_by_audio():
+def test_generic_tag_refined_by_confident_audio():
     r = G.decide("Electronic", AUDIO, remix=False)
     assert r["genre"] == "Jersey Club" and r["genre_source"] == "audio"
 
 
-def test_no_tag_uses_audio():
+def test_no_tag_uses_confident_audio():
     r = G.decide(None, AUDIO, remix=False)
     assert r["genre"] == "Jersey Club" and r["genre_source"] == "audio"
 
 
+def test_low_conf_audio_no_tag_is_other():
+    # the fix: unsure audio guess + no tag -> Other, NOT a confident wrong label
+    r = G.decide(None, LOWAUDIO, remix=False)
+    assert r["genre"] == "Other"
+
+
 def test_low_conf_audio_falls_back_to_generic_tag():
-    weak = {"genre": "House", "subgenre": "House", "genre_confidence": 0.02}
-    r = G.decide("Electronic", weak, remix=False)
+    # unsure audio + generic tag -> keep the honest generic tag, don't refine
+    r = G.decide("Electronic", LOWAUDIO, remix=False)
     assert r["genre"] == "Electronic" and r["genre_source"] == "tag"
 
 

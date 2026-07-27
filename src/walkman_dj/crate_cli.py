@@ -173,6 +173,33 @@ def cmd_backfill_genre(args):
     print(f"enqueued {n} songs for genre backfill — run: crate analyzer --daemon")
 
 
+def cmd_refix_genre(args):
+    """Re-decide every audio-classified genre under the current confidence floor.
+    Uses the stored audio prediction + re-read tag — no re-analysis needed."""
+    import sqlite3
+    from walkman_dj import genre_label, schema
+    from mutagen import File as MF
+    schema.ensure_schema(DB)
+    c = sqlite3.connect(DB, timeout=60); c.row_factory = sqlite3.Row
+    rows = c.execute("SELECT fp,genre,subgenre,genre_confidence,canonical_path,title "
+                     "FROM recordings WHERE genre_source='audio'").fetchall()
+    changed = 0
+    for r in rows:
+        audio = {"genre": r["genre"], "subgenre": r["subgenre"],
+                 "genre_confidence": r["genre_confidence"]}
+        try:
+            tags = MF(r["canonical_path"], easy=True) or {}
+        except Exception:
+            tags = {}
+        new = genre_label.label_track(r["canonical_path"], tags, audio)
+        if new["genre"] != r["genre"] or new["genre_source"] != "audio":
+            c.execute("UPDATE recordings SET genre=?,subgenre=?,genre_source=?,genre_confidence=? WHERE fp=?",
+                      (new["genre"], new["subgenre"], new["genre_source"], new["genre_confidence"], r["fp"]))
+            changed += 1
+    c.commit()
+    print(f"refixed {changed}/{len(rows)} audio genres (floor={genre_label._AUDIO_MIN})")
+
+
 def cmd_vibe_path(args):
     from walkman_dj import vibe_path
     r = vibe_path.run(DB, args.genre, vibe=args.vibe, k=args.min_vibe, min_conf=args.min_conf,
@@ -311,6 +338,7 @@ def build_parser():
     psm = sub.add_parser("spotify-match"); psm.add_argument("query"); psm.set_defaults(func=cmd_spotify_match)
     pz = sub.add_parser("analyzer"); pz.add_argument("--once", action="store_true"); pz.add_argument("--daemon", action="store_true"); pz.add_argument("--shard", help="i/N: process only shard i of N (parallel workers)"); pz.add_argument("--genre-only", action="store_true", help="skip SOTA beatgrid; only genre/valence/essentia"); pz.set_defaults(func=cmd_analyzer)
     sub.add_parser("backfill-genre").set_defaults(func=cmd_backfill_genre)
+    sub.add_parser("refix-genre").set_defaults(func=cmd_refix_genre)
     pvp = sub.add_parser("vibe-path"); pvp.add_argument("genre")
     pvp.add_argument("--vibe", help="curate toward a set vibe profile (e.g. boiler_room)")
     pvp.add_argument("--min-vibe", type=float, default=1.3, help="std cutoff for vibe outliers (lower=stricter)")
