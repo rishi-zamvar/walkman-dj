@@ -27,39 +27,54 @@ def to_camelot(name):
     return _MUSICAL.get(name)
 
 
-def read_rekordbox():
-    """{file_path: (camelot, bpm)} from the live Rekordbox DB."""
-    from pyrekordbox import Rekordbox6Database
-    db = Rekordbox6Database()
-    out = {}
-    for c in db.get_content():
-        p = getattr(c, "FolderPath", None)
-        if not p:
-            continue
-        key = c.Key.ScaleName if getattr(c, "Key", None) else None
-        bpm = (getattr(c, "BPM", 0) or 0) / 100.0
-        out[p] = (to_camelot(key), bpm if bpm > 0 else None)
-    return out
+def _first_downbeat(db, content):
+    """Seconds to the first downbeat (first 'beat 1') from the Rekordbox beatgrid.
+    With BPM this reconstructs the whole grid for constant-tempo tracks."""
+    try:
+        for anlz in db.read_anlz_files(content).values():
+            bg = anlz.get("beat_grid")
+            if bg:
+                nums, _bpms, times = bg
+                for n, t in zip(nums, times):
+                    if int(n) == 1:
+                        return round(float(t), 4)
+                return round(float(times[0]), 4)
+    except Exception:
+        return None
+    return None
 
 
 def import_keys(lib_db):
-    """Overwrite camelot + bpm from Rekordbox for every matching path. Returns stats."""
-    rb = read_rekordbox()
+    """Overwrite camelot + bpm + first_downbeat from Rekordbox for every matching path."""
+    from pyrekordbox import Rekordbox6Database
+    db = Rekordbox6Database()
+    by_path = {}
+    for c in db.get_content():
+        p = getattr(c, "FolderPath", None)
+        if p:
+            by_path[p] = c
+
     con = sqlite3.connect(lib_db, timeout=60)
-    matched = updated = 0
+    matched = updated = grid = 0
     for fp, path in con.execute("SELECT fp, canonical_path FROM recordings").fetchall():
-        if path not in rb:
+        c = by_path.get(path)
+        if c is None:
             continue
         matched += 1
-        cam, bpm = rb[path]
+        cam = to_camelot(c.Key.ScaleName if getattr(c, "Key", None) else None)
+        bpm = (getattr(c, "BPM", 0) or 0) / 100.0
+        fdb = _first_downbeat(db, c)
         sets, vals = [], []
         if cam:
             sets.append("camelot=?"); vals.append(cam)
         if bpm:
             sets.append("bpm=?"); vals.append(bpm)
+        if fdb is not None:
+            sets.append("first_downbeat=?"); vals.append(fdb); grid += 1
         if sets:
-            sets.append("beat_engine=?"); vals.append("rekordbox")   # provenance = authoritative
+            sets.append("beat_engine=?"); vals.append("rekordbox")   # authoritative provenance
             con.execute(f"UPDATE recordings SET {','.join(sets)} WHERE fp=?", (*vals, fp))
             updated += 1
     con.commit()
-    return {"rekordbox_tracks": len(rb), "matched": matched, "updated": updated}
+    return {"rekordbox_tracks": len(by_path), "matched": matched,
+            "updated": updated, "with_beatgrid": grid}
