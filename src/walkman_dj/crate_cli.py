@@ -213,6 +213,50 @@ def cmd_import_rekordbox(args):
           f"updated {r['updated']} with authoritative key+BPM")
 
 
+def cmd_enrich_meta(args):
+    """Fill genre/label/release_date/ISRC/year from AcoustID+MusicBrainz+Discogs+Last.fm.
+    Rekordbox owns key/bpm — never touched. Targets 'Other'/untagged/missing-catalog rows."""
+    import sqlite3, json
+    from walkman_dj import enrich, schema
+    schema.ensure_schema(DB)
+    c = sqlite3.connect(DB, timeout=60); c.row_factory = sqlite3.Row
+    if args.only_unlabeled:
+        where = "genre='Other' OR genre IS NULL"
+    else:
+        where = ("genre='Other' OR genre IS NULL OR label IS NULL "
+                 "OR release_date IS NULL OR isrc IS NULL")
+    rows = c.execute(f"SELECT fp,canonical_path,artist,title,provenance FROM recordings "
+                     f"WHERE ({where}) ORDER BY artist LIMIT ?", (args.limit,)).fetchall()
+    print(f"enriching {len(rows)} tracks...")
+    done = filled = 0
+    for r in rows:
+        try:
+            up, prov, _ = enrich.enrich_one(r["canonical_path"], r["artist"] or "", r["title"] or "")
+        except Exception:
+            up, prov = {}, {}
+        if up:
+            merged_prov = {**(json.loads(r["provenance"]) if r["provenance"] else {}), **prov}
+            up["provenance"] = json.dumps(merged_prov)
+            sets = ",".join(f"{k}=?" for k in up)
+            c.execute(f"UPDATE recordings SET {sets} WHERE fp=?", (*up.values(), r["fp"]))
+            filled += 1
+        done += 1
+        if done % 25 == 0:
+            c.commit(); print(f"  {done}/{len(rows)} ({filled} enriched)", flush=True)
+    c.commit()
+    print(f"done: {filled}/{len(rows)} tracks enriched")
+
+
+def cmd_insights(args):
+    from walkman_dj import insights, schema
+    schema.ensure_schema(DB)
+    txt = insights.report(DB)
+    print(txt)
+    out = os.path.join(os.path.dirname(DB), "insights.txt")
+    open(out, "w").write(txt)
+    print(f"(saved -> {out})")
+
+
 def cmd_vibe_path(args):
     from walkman_dj import vibe_path
     r = vibe_path.run(DB, args.genre, vibe=args.vibe, k=args.min_vibe, min_conf=args.min_conf,
@@ -353,6 +397,9 @@ def build_parser():
     sub.add_parser("backfill-genre").set_defaults(func=cmd_backfill_genre)
     sub.add_parser("refix-genre").set_defaults(func=cmd_refix_genre)
     sub.add_parser("import-rekordbox").set_defaults(func=cmd_import_rekordbox)
+    pem = sub.add_parser("enrich-meta"); pem.add_argument("--limit", type=int, default=100000)
+    pem.add_argument("--only-unlabeled", action="store_true"); pem.set_defaults(func=cmd_enrich_meta)
+    sub.add_parser("insights").set_defaults(func=cmd_insights)
     pvp = sub.add_parser("vibe-path"); pvp.add_argument("genre")
     pvp.add_argument("--vibe", help="curate toward a set vibe profile (e.g. boiler_room)")
     pvp.add_argument("--min-vibe", type=float, default=1.3, help="std cutoff for vibe outliers (lower=stricter)")

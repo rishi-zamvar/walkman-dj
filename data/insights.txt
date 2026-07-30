@@ -1,0 +1,52 @@
+# Library Insights — 6960 tracks
+
+## Genres
+   2519  Hip-Hop
+   1436  Other
+    609  R&B
+    329  House
+    289  Electronic
+    254  UK Garage
+    216  Latin
+    154  Pop
+    149  Drum & Bass
+    127  Trap
+    112  Reggaeton
+     91  Electro
+
+## Subgenres
+   1559  Hip-Hop
+   1102  Trap
+    464  House
+    355  Electronic
+    271  UK Garage
+    186  Reggaeton
+    172  Pop
+    129  R&B
+    126  Downtempo
+    102  Grime
+     89  Drum & Bass
+     85  Soul/Funk
+
+## Top labels
+
+## By decade
+
+## BPM bands
+    173  0-90 bpm
+   1070  90-110 bpm
+   1133  110-125 bpm
+   1657  125-135 bpm
+   1384  135-150 bpm
+   1500  150-999 bpm
+
+## Source coverage (trust)
+  genre: {'audio': 622, 'none': 1435, 'tag': 4874}
+  bpm         6917/6960  (99%)
+  camelot     6932/6960  (99%)
+  label          0/6960  (0%)
+  isrc         514/6960  (7%)
+  year           0/6960  (0%)
+  mbid           0/6960  (0%)
+  valence     6957/6960  (99%)
+  key/bpm from Rekordbox: 6875/6960 (98%)
