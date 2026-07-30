@@ -225,8 +225,10 @@ def cmd_enrich_meta(args):
     else:
         where = ("genre='Other' OR genre IS NULL OR label IS NULL "
                  "OR release_date IS NULL OR isrc IS NULL")
+    # only rows with a real artist tag — blank-artist tracks can't be reliably identified
     rows = c.execute(f"SELECT fp,canonical_path,artist,title,provenance FROM recordings "
-                     f"WHERE ({where}) ORDER BY artist LIMIT ?", (args.limit,)).fetchall()
+                     f"WHERE ({where}) AND artist IS NOT NULL AND TRIM(artist)!='' "
+                     f"ORDER BY artist LIMIT ?", (args.limit,)).fetchall()
     print(f"enriching {len(rows)} tracks...")
     done = filled = 0
     for r in rows:

@@ -70,16 +70,16 @@ def identify(path, artist="", title=""):
                     if rec.get("id"):
                         a = (rec.get("artists") or [{}])[0].get("name", "")
                         return {"mbid": rec["id"], "artist": a, "title": rec.get("title")}
-    # fallback: MusicBrainz text search
-    if artist or title:
+    # fallback: MusicBrainz text search — REQUIRES a real artist (blank-artist search
+    # returns confident garbage), and the hit's artist must fuzzy-match ours.
+    if artist and title:
         q = urllib.parse.quote(f'artist:"{artist}" AND recording:"{title}"')
-        data = _get(f"https://musicbrainz.org/ws/2/recording?query={q}&fmt=json&limit=1",
+        data = _get(f"https://musicbrainz.org/ws/2/recording?query={q}&fmt=json&limit=3",
                     "musicbrainz")
-        recs = data.get("recordings", [])
-        if recs:
-            r = recs[0]
+        for r in data.get("recordings", []):
             a = (r.get("artist-credit") or [{}])[0].get("name", "")
-            return {"mbid": r["id"], "artist": a, "title": r.get("title")}
+            if fuzz.token_set_ratio(artist, a) / 100 >= 0.72:
+                return {"mbid": r["id"], "artist": a, "title": r.get("title")}
     return {}
 
 
@@ -185,6 +185,8 @@ def merge(sources):
                 val = genre_map.normalize(val) or val
             if val:
                 updates[field], prov[field] = val, src
+                if field == "genre":          # keep genre_source consistent with the winner
+                    updates["genre_source"] = src
                 break
     # mood_tags from last.fm (informational, not genre)
     tags = sources.get("lastfm", {}).get("tags")
@@ -194,7 +196,11 @@ def merge(sources):
 
 
 def enrich_one(path, artist, title):
-    """Full pipeline for one track -> (updates, provenance, mbid)."""
+    """Full pipeline for one track -> (updates, provenance, mbid).
+    Skips tracks with no artist tag — they can't be reliably identified, and a
+    blank-artist lookup returns confident-but-wrong data."""
+    if not (artist or "").strip():
+        return {}, {}, None
     ident = identify(path, artist, title)
     a = ident.get("artist") or artist
     t = ident.get("title") or title

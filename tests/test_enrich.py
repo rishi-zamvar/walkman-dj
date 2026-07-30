@@ -35,6 +35,27 @@ def test_lookups_degrade_without_keys(monkeypatch):
     assert enrich.identify("/x.flac", "a", "b") == {}
 
 
+def test_enrich_one_skips_empty_artist(monkeypatch):
+    # blank-artist tracks can't be reliably identified -> skip, no garbage
+    called = []
+    monkeypatch.setattr(enrich, "identify", lambda *a: called.append(1) or {})
+    up, prov, mbid = enrich.enrich_one("/x.flac", "", "Cn Tower")
+    assert up == {} and mbid is None and not called   # identify never even ran
+
+
+def test_identify_mb_fallback_gates_wrong_artist(monkeypatch):
+    monkeypatch.setattr(enrich.keys, "get", lambda n: None)   # no acoustid
+    # MB returns a recording by a different artist -> must be rejected
+    monkeypatch.setattr(enrich, "_get", lambda *a, **k: {"recordings": [
+        {"id": "x", "title": "Cn Tower", "artist-credit": [{"name": "Some 1977 Band"}]}]})
+    assert enrich.identify("/x.flac", "Drake", "Cn Tower") == {}
+
+
+def test_merge_sets_genre_source(monkeypatch):
+    up, prov = enrich.merge({"discogs": {"genre": "UK Garage"}})
+    assert up["genre"] == "UK Garage" and up["genre_source"] == "discogs"
+
+
 def test_enrich_one_composes(monkeypatch):
     monkeypatch.setattr(enrich, "identify", lambda p, a, t: {"mbid": "m1", "artist": a, "title": t})
     monkeypatch.setattr(enrich, "mb", lambda m: {"label": "L", "release_date": "2000-01-01"})
