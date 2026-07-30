@@ -45,6 +45,23 @@ def test_enrich_one_composes(monkeypatch):
     assert up["mbid"] == "m1" and prov["mbid"] == "acoustid"
 
 
+def test_discogs_rejects_wrong_artist(monkeypatch):
+    monkeypatch.setattr(enrich.keys, "get", lambda n: "tok")
+    # search returns a hit whose artist ("Various") doesn't match ours -> rejected
+    monkeypatch.setattr(enrich, "_get", lambda *a, **k: {"results": [
+        {"title": "Various - Broken Hearted", "year": 2005, "style": ["Rock & Roll"]}]})
+    assert enrich.discogs("Interplanetary Criminal", "Where's My Money") == {}
+
+
+def test_discogs_accepts_matching_artist(monkeypatch):
+    monkeypatch.setattr(enrich.keys, "get", lambda n: "tok")
+    monkeypatch.setattr(enrich, "_get", lambda *a, **k: {"results": [
+        {"title": "DJ Q - Ineffable", "year": 2014, "style": ["UK Garage"],
+         "genre": ["Electronic"], "label": ["Local Action"], "catno": "LOCLP003"}]})
+    r = enrich.discogs("DJ Q", "Ineffable")
+    assert r["genre"] == "UK Garage" and r["year"] == 2014 and r["label"] == "Local Action"
+
+
 def test_mb_parses_recording(monkeypatch):
     fake = {"genres": [{"name": "garage", "count": 5}, {"name": "house", "count": 1}],
             "isrcs": ["GBTEST0100001"],

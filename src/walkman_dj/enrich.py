@@ -11,6 +11,8 @@ import time
 import urllib.parse
 import urllib.request
 
+from rapidfuzz import fuzz
+
 from walkman_dj import genre_map, keys
 
 _UA = "walkman-dj/1.0 (personal music library)"
@@ -104,17 +106,30 @@ def mb(mbid):
     return out
 
 
+_DISCOGS_MIN = 0.72   # min artist-match confidence — reject loose/wrong hits
+
+
+def _discogs_artist(hit):
+    """Artist from a Discogs release hit — the part before ' - ' in its title."""
+    return (hit.get("title") or "").split(" - ")[0].strip()
+
+
 def discogs(artist, title):
     tok = keys.get("DISCOGS_TOKEN")
-    if not tok or not (artist or title):
+    if not tok or not artist:
         return {}
     q = urllib.parse.quote(f"{artist} {title}")
-    data = _get(f"https://api.discogs.com/database/search?q={q}&type=release&per_page=1"
-                f"&token={tok}", "discogs")
-    hits = data.get("results", [])
-    if not hits:
+    url = (f"https://api.discogs.com/database/search?q={q}&type=release&per_page=5&token=" + tok)
+    hits = _get(url, "discogs").get("results", [])
+    # confidence gate: the hit's artist must actually match ours (kills "Various", wrong artist)
+    best, best_s = None, 0.0
+    for hit in hits:
+        s = fuzz.token_set_ratio(artist, _discogs_artist(hit)) / 100
+        if s > best_s:
+            best, best_s = hit, s
+    if not best or best_s < _DISCOGS_MIN:
         return {}
-    h = hits[0]
+    h = best
     out = {}
     styles = h.get("style") or []
     parents = h.get("genre") or []
