@@ -153,38 +153,46 @@ def harmonic_path(idx, rows, pct=BPM_PCT, drum_min=DRUM_MIN):
                 continue
             seen.add(u); comp.append(u); stack += [j for j in adj[u] if j not in seen]
         comps.append(comp)
-    comp = set(max(comps, key=len))
-    adj = {i: (adj[i] & comp) for i in comp}
-    idx = list(comp)
-    start = min(comp, key=lambda i: rows[i]["energy"] or 0.0)     # open on lowest energy
-    path, inp = [start], {start}
+    comp = sorted(max(comps, key=len))
+    adj = {i: (adj[i] & set(comp)) for i in comp}
 
-    def extend():
-        moved = True
-        while moved:
-            moved = False
-            for tail_side in (True, False):
-                end = path[-1] if tail_side else path[0]
-                nb = [j for j in adj[end] if j not in inp]
-                if nb:
-                    j = min(nb, key=lambda j: transition(rows[end], rows[j], pct, drum_min))
-                    path.append(j) if tail_side else path.insert(0, j)
-                    inp.add(j); moved = True
+    def _build(start):
+        path, inp = [start], {start}
 
-    extend()
-    last = -1
-    while len(inp) < len(idx) and len(inp) != last:      # rotate until no new track lands
-        last = len(inp)
-        for flip in (False, True):                        # rotate off tail, then head
-            if flip:
-                path.reverse()
-            for w in adj[path[-1]]:
-                i = path.index(w)
-                if i < len(path) - 2:                     # interior neighbour -> new endpoint
-                    path[i + 1:] = path[i + 1:][::-1]
-                    extend()
-                    break
-    kept, _ = clean_chain(path, rows, pct, drum_min)      # guarantee every edge is a valid mix
+        def extend():
+            moved = True
+            while moved:
+                moved = False
+                for tail_side in (True, False):
+                    end = path[-1] if tail_side else path[0]
+                    nb = [j for j in adj[end] if j not in inp]
+                    if nb:
+                        j = min(nb, key=lambda j: transition(rows[end], rows[j], pct, drum_min))
+                        path.append(j) if tail_side else path.insert(0, j)
+                        inp.add(j)
+                        moved = True
+
+        extend()
+        last = -1
+        while len(inp) < len(comp) and len(inp) != last:   # rotate until no new track lands
+            last = len(inp)
+            for flip in (False, True):
+                if flip:
+                    path.reverse()
+                for w in adj[path[-1]]:
+                    i = path.index(w)
+                    if i < len(path) - 2:                  # interior neighbour -> new endpoint
+                        path[i + 1:] = path[i + 1:][::-1]
+                        extend()
+                        break
+        return path
+
+    # Pósa rotation is start-sensitive — try several deterministic starts, keep the longest.
+    by_energy = sorted(comp, key=lambda i: rows[i]["energy"] or 0.0)
+    starts = {by_energy[0], by_energy[-1], comp[0], comp[len(comp) // 2], comp[-1]}
+    starts |= set(by_energy[:: max(1, len(comp) // 12)])   # ~12 evenly-spread by energy
+    best = max((_build(s) for s in starts), key=len)
+    kept, _ = clean_chain(best, rows, pct, drum_min)       # guarantee every edge is a valid mix
     return kept
 
 
