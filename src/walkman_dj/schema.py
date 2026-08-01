@@ -29,6 +29,8 @@ NEW_COLUMNS = [
     ("mood_tags", "TEXT"), ("mbid", "TEXT"), ("provenance", "TEXT"),
     # playlist curation: 1 = never select into a playlist/set (rejected tracks, mixes)
     ("blacklisted", "INTEGER"),
+    # code-standardized tempo drift (% CV of per-window tempo): ~0 constant, >3 variable
+    ("tempo_cv", "REAL"),
 ]
 
 _norm = lambda s: re.sub(r"[^a-z0-9]+", "", (s or "").lower())

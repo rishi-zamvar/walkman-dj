@@ -264,6 +264,31 @@ def cmd_insights(args):
     print(f"(saved -> {out})")
 
 
+def cmd_tempo_scan(args):
+    """Compute code-standardized tempo drift (tempo_cv) for tracks that lack it.
+    Mode-independent — reveals BPM drift Rekordbox 'normal' analysis hides."""
+    import sqlite3
+    from walkman_dj import schema, tempo_stability
+    schema.ensure_schema(DB)
+    c = sqlite3.connect(DB, timeout=60)
+    where = "tempo_cv IS NULL AND canonical_path IS NOT NULL"
+    if args.only_keyed:
+        where += " AND beat_engine='rekordbox'"
+    rows = c.execute(f"SELECT fp, canonical_path, bpm FROM recordings WHERE {where} LIMIT ?",
+                     (args.limit,)).fetchall()
+    print(f"scanning tempo stability for {len(rows)} tracks...")
+    done = 0
+    for fp, path, bpm in rows:
+        cv = tempo_stability.tempo_cv(path, bpm)
+        if cv is not None:
+            c.execute("UPDATE recordings SET tempo_cv=? WHERE fp=?", (cv, fp))
+        done += 1
+        if done % 25 == 0:
+            c.commit(); print(f"  {done}/{len(rows)}", flush=True)
+    c.commit()
+    print(f"done: {done} scanned")
+
+
 def cmd_blacklist(args):
     """Mark tracks matching a query so they're never selected into a playlist/set."""
     import sqlite3
@@ -425,6 +450,8 @@ def build_parser():
     pem.add_argument("--only-unlabeled", action="store_true"); pem.set_defaults(func=cmd_enrich_meta)
     sub.add_parser("insights").set_defaults(func=cmd_insights)
     pbl = sub.add_parser("blacklist"); pbl.add_argument("query"); pbl.set_defaults(func=cmd_blacklist)
+    pts = sub.add_parser("tempo-scan"); pts.add_argument("--limit", type=int, default=100000)
+    pts.add_argument("--only-keyed", action="store_true"); pts.set_defaults(func=cmd_tempo_scan)
     pvp = sub.add_parser("vibe-path"); pvp.add_argument("genre")
     pvp.add_argument("--vibe", help="curate toward a set vibe profile (e.g. boiler_room)")
     pvp.add_argument("--min-vibe", type=float, default=1.3, help="std cutoff for vibe outliers (lower=stricter)")
