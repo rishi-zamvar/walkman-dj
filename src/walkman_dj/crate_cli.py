@@ -200,6 +200,26 @@ def cmd_refix_genre(args):
     print(f"refixed {changed}/{len(rows)} audio genres (floor={genre_label._AUDIO_MIN})")
 
 
+def cmd_push_rekordbox(args):
+    """Inject an .m3u8 as a real Rekordbox playlist (Rekordbox must be CLOSED). Backs up first."""
+    import subprocess, shutil, os, glob
+    if subprocess.run(["pgrep", "-x", "rekordbox"], capture_output=True).stdout.strip():
+        print("Rekordbox is RUNNING — close it first (it locks the library)."); return
+    # back up the master.db before writing
+    share = os.path.expanduser("~/Library/Pioneer/rekordbox")
+    for dbf in glob.glob(os.path.join(share, "master.db")):
+        shutil.copy2(dbf, dbf + ".bak")
+        print(f"backed up {os.path.basename(dbf)} -> {os.path.basename(dbf)}.bak")
+    from walkman_dj import rekordbox_import
+    for m in args.m3u8:
+        try:
+            r = rekordbox_import.push_playlist(m, args.name)
+            print(f"'{r['playlist']}': added {r['added']}/{r['total']}"
+                  + (f" ({r['missing']} not in Rekordbox collection)" if r['missing'] else ""))
+        except Exception as e:
+            print(f"push failed for {m}: {type(e).__name__}: {e}")
+
+
 def cmd_import_rekordbox(args):
     """Import authoritative key + BPM from the live Rekordbox DB (close Rekordbox first).
     --m3u8 scopes to just that playlist's tracks (much faster)."""
@@ -446,6 +466,7 @@ def build_parser():
     sub.add_parser("backfill-genre").set_defaults(func=cmd_backfill_genre)
     sub.add_parser("refix-genre").set_defaults(func=cmd_refix_genre)
     pir = sub.add_parser("import-rekordbox"); pir.add_argument("--m3u8", help="scope to one playlist's tracks (faster)"); pir.set_defaults(func=cmd_import_rekordbox)
+    ppr = sub.add_parser("push-rekordbox"); ppr.add_argument("m3u8", nargs="+"); ppr.add_argument("--name"); ppr.set_defaults(func=cmd_push_rekordbox)
     pem = sub.add_parser("enrich-meta"); pem.add_argument("--limit", type=int, default=100000)
     pem.add_argument("--only-unlabeled", action="store_true"); pem.set_defaults(func=cmd_enrich_meta)
     sub.add_parser("insights").set_defaults(func=cmd_insights)

@@ -44,6 +44,36 @@ def _first_downbeat(db, content):
     return None
 
 
+def push_playlist(m3u8_path, name=None):
+    """Create a Rekordbox playlist from an .m3u8 and add its tracks in order.
+    Rekordbox MUST be closed. Tracks must already be in the Rekordbox collection
+    (they are, since we imported their keys). Replaces a same-named playlist. Returns stats."""
+    import os
+    from pyrekordbox import Rekordbox6Database
+    paths = [l.strip() for l in open(os.path.expanduser(m3u8_path))
+             if l.strip() and not l.startswith("#")]
+    name = name or os.path.splitext(os.path.basename(m3u8_path))[0]
+    db = Rekordbox6Database()
+    by_path = {getattr(c, "FolderPath", None): c for c in db.get_content()}
+
+    # replace an existing playlist of the same name (idempotent re-push)
+    for pl in db.get_playlist():
+        if getattr(pl, "Name", None) == name:
+            db.delete_playlist(pl)
+    pl = db.create_playlist(name)
+
+    added = missing = 0
+    for p in paths:
+        c = by_path.get(p)
+        if c is None:
+            missing += 1
+            continue
+        db.add_to_playlist(pl, c)
+        added += 1
+    db.commit()
+    return {"playlist": name, "added": added, "missing": missing, "total": len(paths)}
+
+
 def import_keys(lib_db, only_paths=None):
     """Overwrite camelot + bpm + first_downbeat from Rekordbox for every matching path.
     only_paths (a set of canonical_paths) scopes the run to just those tracks — much
