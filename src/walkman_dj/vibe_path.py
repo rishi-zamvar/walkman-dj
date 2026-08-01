@@ -29,7 +29,9 @@ def load(db, genre):
                   essentia_danceability AS danceability, speechiness,
                   instrumentalness, liveness, genre_confidence, genre_source,
                   subgenre, bass_weight, brightness, canonical_path AS path
-           FROM recordings WHERE genre=? AND valence IS NOT NULL""", (genre,))]
+           FROM recordings WHERE genre=? AND valence IS NOT NULL
+                  AND (duration IS NULL OR duration <= 600)""", (genre,))]
+# ponytail: 10-min cap blacklists DJ mixes/long tracks from any playlist pool
 
 
 def matrix(rows):
