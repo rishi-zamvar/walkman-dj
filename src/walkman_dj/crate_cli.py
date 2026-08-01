@@ -259,6 +259,23 @@ def cmd_insights(args):
     print(f"(saved -> {out})")
 
 
+def cmd_blacklist(args):
+    """Mark tracks matching a query so they're never selected into a playlist/set."""
+    import sqlite3
+    from walkman_dj import schema
+    schema.ensure_schema(DB)
+    c = sqlite3.connect(DB, timeout=60)
+    q = f"%{args.query}%"
+    hits = c.execute("SELECT artist,title FROM recordings WHERE title LIKE ? OR "
+                     "(artist||' '||title) LIKE ?", (q, q)).fetchall()
+    c.execute("UPDATE recordings SET blacklisted=1 WHERE title LIKE ? OR "
+              "(artist||' '||title) LIKE ?", (q, q))
+    c.commit()
+    print(f"blacklisted {len(hits)} track(s) matching '{args.query}':")
+    for a, t in hits:
+        print(f"  {a} - {t}")
+
+
 def cmd_vibe_path(args):
     from walkman_dj import vibe_path
     r = vibe_path.run(DB, args.genre, vibe=args.vibe, k=args.min_vibe, min_conf=args.min_conf,
@@ -402,6 +419,7 @@ def build_parser():
     pem = sub.add_parser("enrich-meta"); pem.add_argument("--limit", type=int, default=100000)
     pem.add_argument("--only-unlabeled", action="store_true"); pem.set_defaults(func=cmd_enrich_meta)
     sub.add_parser("insights").set_defaults(func=cmd_insights)
+    pbl = sub.add_parser("blacklist"); pbl.add_argument("query"); pbl.set_defaults(func=cmd_blacklist)
     pvp = sub.add_parser("vibe-path"); pvp.add_argument("genre")
     pvp.add_argument("--vibe", help="curate toward a set vibe profile (e.g. boiler_room)")
     pvp.add_argument("--min-vibe", type=float, default=1.3, help="std cutoff for vibe outliers (lower=stricter)")

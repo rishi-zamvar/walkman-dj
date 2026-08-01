@@ -30,8 +30,9 @@ def load(db, genre):
                   instrumentalness, liveness, genre_confidence, genre_source,
                   subgenre, bass_weight, brightness, canonical_path AS path
            FROM recordings WHERE genre=? AND valence IS NOT NULL
-                  AND (duration IS NULL OR duration <= 600)""", (genre,))]
-# ponytail: 10-min cap blacklists DJ mixes/long tracks from any playlist pool
+                  AND (duration IS NULL OR duration <= 600)
+                  AND blacklisted IS NOT 1""", (genre,))]
+# ponytail: 10-min cap + blacklist flag keep mixes/rejected tracks out of any playlist pool
 
 
 def matrix(rows):

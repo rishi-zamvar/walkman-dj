@@ -27,6 +27,8 @@ NEW_COLUMNS = [
     # enrichment (database lookups: AcoustID/MusicBrainz/Discogs/Last.fm)
     ("year", "INTEGER"), ("catalog_no", "TEXT"), ("country", "TEXT"),
     ("mood_tags", "TEXT"), ("mbid", "TEXT"), ("provenance", "TEXT"),
+    # playlist curation: 1 = never select into a playlist/set (rejected tracks, mixes)
+    ("blacklisted", "INTEGER"),
 ]
 
 _norm = lambda s: re.sub(r"[^a-z0-9]+", "", (s or "").lower())
