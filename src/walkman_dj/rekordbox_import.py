@@ -44,8 +44,10 @@ def _first_downbeat(db, content):
     return None
 
 
-def import_keys(lib_db):
-    """Overwrite camelot + bpm + first_downbeat from Rekordbox for every matching path."""
+def import_keys(lib_db, only_paths=None):
+    """Overwrite camelot + bpm + first_downbeat from Rekordbox for every matching path.
+    only_paths (a set of canonical_paths) scopes the run to just those tracks — much
+    faster than the whole library, since the per-track ANLZ beatgrid read is the slow part."""
     from pyrekordbox import Rekordbox6Database
     db = Rekordbox6Database()
     by_path = {}
@@ -56,7 +58,10 @@ def import_keys(lib_db):
 
     con = sqlite3.connect(lib_db, timeout=60)
     matched = updated = grid = 0
-    for fp, path in con.execute("SELECT fp, canonical_path FROM recordings").fetchall():
+    rows = con.execute("SELECT fp, canonical_path FROM recordings").fetchall()
+    if only_paths is not None:
+        rows = [r for r in rows if r[1] in only_paths]
+    for fp, path in rows:
         c = by_path.get(path)
         if c is None:
             continue

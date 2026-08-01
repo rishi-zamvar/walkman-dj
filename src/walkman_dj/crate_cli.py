@@ -201,10 +201,15 @@ def cmd_refix_genre(args):
 
 
 def cmd_import_rekordbox(args):
-    """Import authoritative key + BPM from the live Rekordbox DB (close Rekordbox first)."""
+    """Import authoritative key + BPM from the live Rekordbox DB (close Rekordbox first).
+    --m3u8 scopes to just that playlist's tracks (much faster)."""
     from walkman_dj import rekordbox_import
+    only = None
+    if getattr(args, "m3u8", None):
+        only = {l.strip() for l in open(os.path.expanduser(args.m3u8))
+                if l.strip() and not l.startswith("#")}
     try:
-        r = rekordbox_import.import_keys(DB)
+        r = rekordbox_import.import_keys(DB, only_paths=only)
     except Exception as e:
         print(f"could not read Rekordbox DB ({type(e).__name__}: {e}).")
         print("Make sure Rekordbox is installed and CLOSED, then retry.")
@@ -415,7 +420,7 @@ def build_parser():
     pz = sub.add_parser("analyzer"); pz.add_argument("--once", action="store_true"); pz.add_argument("--daemon", action="store_true"); pz.add_argument("--shard", help="i/N: process only shard i of N (parallel workers)"); pz.add_argument("--genre-only", action="store_true", help="skip SOTA beatgrid; only genre/valence/essentia"); pz.set_defaults(func=cmd_analyzer)
     sub.add_parser("backfill-genre").set_defaults(func=cmd_backfill_genre)
     sub.add_parser("refix-genre").set_defaults(func=cmd_refix_genre)
-    sub.add_parser("import-rekordbox").set_defaults(func=cmd_import_rekordbox)
+    pir = sub.add_parser("import-rekordbox"); pir.add_argument("--m3u8", help="scope to one playlist's tracks (faster)"); pir.set_defaults(func=cmd_import_rekordbox)
     pem = sub.add_parser("enrich-meta"); pem.add_argument("--limit", type=int, default=100000)
     pem.add_argument("--only-unlabeled", action="store_true"); pem.set_defaults(func=cmd_enrich_meta)
     sub.add_parser("insights").set_defaults(func=cmd_insights)
