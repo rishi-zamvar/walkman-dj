@@ -200,6 +200,26 @@ def cmd_refix_genre(args):
     print(f"refixed {changed}/{len(rows)} audio genres (floor={genre_label._AUDIO_MIN})")
 
 
+def cmd_clean_rekordbox(args):
+    """Remove Rekordbox entries whose file is gone from disk (keeps unmounted-drive tracks).
+    Rekordbox must be CLOSED. Backs up master.db. Use --apply to actually delete."""
+    import subprocess, shutil, os, glob
+    if not args.apply:
+        from walkman_dj import rekordbox_import
+        r = rekordbox_import.clean_missing(dry_run=True)
+        print(f"would delete {r['delete']} dead entries; keeping {r['skipped_unmounted']} "
+              f"on unmounted drives. Re-run with --apply to delete.")
+        return
+    if subprocess.run(["pgrep", "-x", "rekordbox"], capture_output=True).stdout.strip():
+        print("Rekordbox is RUNNING — close it first."); return
+    share = os.path.expanduser("~/Library/Pioneer/rekordbox")
+    for dbf in glob.glob(os.path.join(share, "master.db")):
+        shutil.copy2(dbf, dbf + ".bak"); print(f"backed up {os.path.basename(dbf)}.bak")
+    from walkman_dj import rekordbox_import
+    r = rekordbox_import.clean_missing(dry_run=False)
+    print(f"deleted {r['deleted']} dead entries | kept {r['skipped_unmounted']} on unmounted drives")
+
+
 def cmd_push_rekordbox(args):
     """Inject an .m3u8 as a real Rekordbox playlist (Rekordbox must be CLOSED). Backs up first."""
     import subprocess, shutil, os, glob
@@ -467,6 +487,7 @@ def build_parser():
     sub.add_parser("refix-genre").set_defaults(func=cmd_refix_genre)
     pir = sub.add_parser("import-rekordbox"); pir.add_argument("--m3u8", help="scope to one playlist's tracks (faster)"); pir.set_defaults(func=cmd_import_rekordbox)
     ppr = sub.add_parser("push-rekordbox"); ppr.add_argument("m3u8", nargs="+"); ppr.add_argument("--name"); ppr.set_defaults(func=cmd_push_rekordbox)
+    pcr = sub.add_parser("clean-rekordbox"); pcr.add_argument("--apply", action="store_true"); pcr.set_defaults(func=cmd_clean_rekordbox)
     pem = sub.add_parser("enrich-meta"); pem.add_argument("--limit", type=int, default=100000)
     pem.add_argument("--only-unlabeled", action="store_true"); pem.set_defaults(func=cmd_enrich_meta)
     sub.add_parser("insights").set_defaults(func=cmd_insights)

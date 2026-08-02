@@ -44,6 +44,33 @@ def _first_downbeat(db, content):
     return None
 
 
+def clean_missing(dry_run=True):
+    """Remove Rekordbox tracks whose file is gone from disk. SKIPS tracks on an
+    UNMOUNTED external volume (those files may still exist — reconnect the drive).
+    Rekordbox must be closed. Returns stats. dry_run=True only counts, deletes nothing."""
+    import os
+    from pyrekordbox import Rekordbox6Database
+    db = Rekordbox6Database()
+    mounted = {"/Volumes/" + v for v in (os.listdir("/Volumes") if os.path.isdir("/Volumes") else [])}
+    to_delete, skipped_unmounted = [], 0
+    for c in db.get_content():
+        p = getattr(c, "FolderPath", None)
+        if not p or os.path.exists(p):
+            continue
+        if p.startswith("/Volumes/"):
+            vol = "/".join(p.split("/")[:3])            # /Volumes/<name>
+            if vol not in mounted:                      # drive not connected -> leave it
+                skipped_unmounted += 1
+                continue
+        to_delete.append(c)
+    if not dry_run:
+        for c in to_delete:
+            db.delete_content(c) if hasattr(db, "delete_content") else db.delete(c)
+        db.commit()
+    return {"delete": len(to_delete), "skipped_unmounted": skipped_unmounted,
+            "deleted": 0 if dry_run else len(to_delete)}
+
+
 def push_playlist(m3u8_path, name=None):
     """Create a Rekordbox playlist from an .m3u8 and add its tracks in order.
     Rekordbox MUST be closed. Tracks must already be in the Rekordbox collection
