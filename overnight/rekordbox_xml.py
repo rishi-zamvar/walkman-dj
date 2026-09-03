@@ -109,11 +109,14 @@ def main():
             "Artist": r["artist"] or "",
             "Genre": r["genre"] or "",
             "TotalTime": str(int(r["duration"] or 0)),
-            "AverageBpm": f'{(r["bpm"] or 0):.2f}',
-            "Tonality": tonality(r["camelot"]),
+            "AverageBpm": f'{r["bpm"]:.2f}' if r["bpm"] else None,
+            "Tonality": tonality(r["camelot"]) or None,
             "Location": location(r["canonical_path"]),
         }
-        out.append("    <TRACK " + " ".join(f'{k}={quoteattr(v)}' for k, v in attrs.items()) + "/>")
+        # OMIT unknown bpm/key rather than writing 0.00 / "" — rekordbox treats a present
+        # value as analysed truth and won't re-derive it.
+        out.append("    <TRACK " + " ".join(f'{k}={quoteattr(v)}'
+                                            for k, v in attrs.items() if v is not None) + "/>")
     out.append("  </COLLECTION>")
     out.append("  <PLAYLISTS>")
     out.append(f'    <NODE Type="0" Name="ROOT" Count="{len(folders)}">')
