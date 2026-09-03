@@ -15,7 +15,7 @@ Public surface:
 All deletions go to the macOS Trash (never rm).
 """
 from __future__ import annotations
-import os, re, json, sqlite3, subprocess, shutil
+import os, re, json, sqlite3, subprocess, shutil, unicodedata
 from dataclasses import dataclass
 
 AUDIO_EXTS = (".flac", ".wav", ".aiff", ".aif", ".m4a", ".aac", ".mp3", ".ogg", ".opus")
@@ -106,6 +106,12 @@ def _norm(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", (s or "").lower())
 
 
+def _pathkey(p: str) -> str:
+    """Compare-safe path key. APFS is case-insensitive and stores a mix of NFC/NFD
+    unicode, so raw string equality reports hundreds of phantom missing files."""
+    return unicodedata.normalize("NFC", os.path.abspath(p)).casefold()
+
+
 def tags(path: str) -> tuple[str, str, str]:
     """(artist, title, album) from tags, falling back to 'Artist - Title' filename parsing."""
     artist = title = album = ""
@@ -155,10 +161,19 @@ def normalize_tags(path: str, write: bool = False) -> dict:
         "album": crate_tags.clean_title(raw["album"] or ""),
         "albumartist": (raw["albumartist"] or raw["artist"] or fa or "").strip(),
     }
+    # deterministic curation rules (aliases / collab / playlist) — self-enforcing so the mess never returns
+    try:
+        from walkman_dj import normalize_rules as _nr
+        _a, _aa, _al, _ = _nr.normalize(out["artist"], out["albumartist"], out["album"], out["title"], generic=write)
+        out["artist"], out["albumartist"], out["album"] = _a, _aa, _al
+    except Exception:
+        pass
     if write and m is not None:
         for k, v in out.items():
             if v:
                 m[k] = [v]
+            elif k == "album" and m.get("album"):
+                del m["album"]        # playlist-as-album demoted -> clear the album tag
         m.save()
     return out
 
@@ -224,6 +239,18 @@ class CrateLib:
         return c
 
     # --- index helpers ---
+    def _disk_files(self) -> list[str]:
+        """Every real audio file under the library root (skips symlinks + dedup losers)."""
+        out = []
+        for dp, _, fns in os.walk(self.root):
+            if "_dedup-losers" in dp:
+                continue
+            for fn in fns:
+                p = os.path.join(dp, fn)
+                if os.path.splitext(fn)[1].lower() in AUDIO_EXTS and not os.path.islink(p):
+                    out.append(p)
+        return sorted(out)
+
     def _candidates(self, dur: float):
         b = int(dur)
         with self._c() as c:
@@ -234,7 +261,10 @@ class CrateLib:
 
     def _match(self, fp: list[int], dur: float):
         for row in self._candidates(dur):
-            if same_recording(fp, dur, json.loads(row["fp"]), row["duration"]):
+            raw = row["fp"]
+            if not raw:  # phantom/no-path rows can carry a null/empty fingerprint
+                continue
+            if same_recording(fp, dur, json.loads(raw), row["duration"]):
                 return row
         return None
 
@@ -369,14 +399,7 @@ class CrateLib:
         """One-time: fingerprint every audio file under root, collapse dupe groups to the
         best copy (Trash the losers), and (re)build the index. Idempotent.
         on_remove(keeper_path, loser_path) is called for every removal (audit log)."""
-        files = []
-        for dp, _, fns in os.walk(self.root):
-            if "_dedup-losers" in dp:
-                continue
-            for fn in fns:
-                if os.path.splitext(fn)[1].lower() in AUDIO_EXTS and not os.path.islink(os.path.join(dp, fn)):
-                    files.append(os.path.join(dp, fn))
-        files.sort()
+        files = self._disk_files()
         groups: list[dict] = []     # each: {fp, dur, best}
         removed = kept = failed = 0
         with self._c() as c:
@@ -448,9 +471,12 @@ class CrateLib:
         import json as _json
         with self._c() as c:
             rows = c.execute("SELECT canonical_path, fp, duration FROM recordings").fetchall()
-        missing = sum(1 for r in rows if not os.path.exists(r["canonical_path"]))
+        live = {_pathkey(p) for p in self._disk_files()}
+        missing = sum(1 for r in rows if _pathkey(r["canonical_path"]) not in live)
         by_bucket = {}
         for r in rows:
+            if not r["fp"]:                  # phantom rows carry no fingerprint
+                continue
             by_bucket.setdefault(int(r["duration"]), []).append(r)
         dup = 0
         for grp in by_bucket.values():
@@ -460,3 +486,121 @@ class CrateLib:
                                       _json.loads(grp[j]["fp"]), grp[j]["duration"]):
                         dup += 1
         return {"recordings": len(rows), "missing": missing, "duplicate_pairs": dup}
+
+    # --- reconciliation ---
+    @staticmethod
+    def _delete_row(c, r):
+        """Drop a recording and everything keyed off it (id, fingerprint, path)."""
+        c.execute("DELETE FROM ml_features WHERE id=?", (r["id"],))
+        c.execute("DELETE FROM track_tags WHERE id=?", (r["id"],))
+        c.execute("DELETE FROM segments WHERE fingerprint=?", (r["fp"],))
+        c.execute("DELETE FROM cue_in WHERE path=?", (r["canonical_path"],))
+        c.execute("DELETE FROM pending_analysis WHERE fingerprint=? OR path=?",
+                  (r["fp"], r["canonical_path"]))
+        c.execute("DELETE FROM recordings WHERE id=?", (r["id"],))
+
+    def prune(self, apply: bool = False, on_progress=None) -> dict:
+        """Reconcile the index against disk. A row whose file merely MOVED is relinked;
+        a row whose file is really gone is deleted along with its analysis rows.
+
+        Relinking matches on the acoustic fingerprint alone — never on path, name or
+        tags — because the moves that strand rows (organize refiling an album, the
+        curation rules rewriting an artist) are exactly the ones that change all three.
+        Dry-run by default. Touches the DB only, never the audio files."""
+        with self._c() as c:
+            rows = c.execute("SELECT id, canonical_path, fp, duration FROM recordings").fetchall()
+        disk = self._disk_files()
+        live = {_pathkey(p) for p in disk}
+        claimed = {_pathkey(r["canonical_path"]) for r in rows}
+        gone = [r for r in rows if _pathkey(r["canonical_path"]) not in live]
+
+        # only files no row currently claims can be the new home of a stranded row
+        orphans = []
+        cands = [p for p in disk if _pathkey(p) not in claimed]
+        for i, p in enumerate(cands):
+            if on_progress:
+                on_progress(i, len(cands), 0, 0)
+            try:
+                orphans.append((p, *fingerprint(p)))
+            except Exception:
+                pass
+
+        # UNIQUE(canonical_path) is case- and NFC/NFD-sensitive, so on APFS two rows can
+        # claim one file. Keep the row whose fingerprint matches it; the rest are stale.
+        collisions, by_key = [], {}
+        for r in rows:
+            by_key.setdefault(_pathkey(r["canonical_path"]), []).append(r)
+        stale_ids = set()
+        for key, grp in by_key.items():
+            if len(grp) < 2 or key not in live:
+                continue
+            try:
+                fp, dur = fingerprint(grp[0]["canonical_path"])
+            except Exception:
+                continue
+            keep = [r for r in grp if same_recording(fp, dur, json.loads(r["fp"]), r["duration"])]
+            if not keep:                     # nothing matches — report, never guess
+                collisions.append([r["canonical_path"] for r in grp])
+                continue
+            stale_ids.update(r["id"] for r in grp if r not in keep)
+
+        relinked, dead, taken = [], [], set()
+        for r in rows:
+            if r["id"] in stale_ids:
+                dead.append(r)
+        for r in gone:
+            stored, dur = json.loads(r["fp"]), r["duration"]
+            hit = next((p for p, fp, d in orphans
+                        if p not in taken and same_recording(fp, d, stored, dur)), None)
+            if hit:
+                relinked.append((r["canonical_path"], hit))
+                taken.add(hit)
+            else:
+                dead.append(r)
+
+        if apply:
+            with self._c() as c:
+                for old, new in relinked:
+                    c.execute("UPDATE recordings SET canonical_path=? WHERE canonical_path=?", (new, old))
+                    c.execute("UPDATE cue_in SET path=? WHERE path=?", (new, old))
+                    c.execute("UPDATE pending_analysis SET path=? WHERE path=?", (new, old))
+                for r in dead:
+                    self._delete_row(c, r)
+                c.commit()
+        return {"recordings": len(rows), "missing": len(gone), "relinked": relinked,
+                "deleted": [r["canonical_path"] for r in dead],
+                "collisions": collisions, "applied": apply}
+
+    def rescan(self, apply: bool = False, on_progress=None) -> dict:
+        """Index audio files that are in the library but absent from the index.
+        Additive only: never moves, retags or trashes anything. A file that
+        fingerprint-matches an already-indexed recording is reported as a dupe and
+        left alone (run `crate dedupe` if you want those collapsed).
+
+        Run `prune` FIRST. A file that merely moved looks unindexed to rescan, which
+        would file it as a brand-new recording and strand the original row's analysis
+        (bpm/key/genre/segments) for prune to then delete."""
+        with self._c() as c:
+            claimed = {_pathkey(r[0]) for r in c.execute("SELECT canonical_path FROM recordings")}
+        new = [p for p in self._disk_files() if _pathkey(p) not in claimed]
+        added, dupes, failed = [], [], []
+        for i, p in enumerate(new):
+            if on_progress:
+                on_progress(i, len(new), len(added), len(dupes))
+            try:
+                fp, dur = fingerprint(p)
+            except Exception:
+                failed.append(p)
+                continue
+            m = self._match(fp, dur)
+            if m:
+                dupes.append((p, m["canonical_path"]))
+                continue
+            if apply:
+                self._index(p, fp, dur)
+                self._enqueue_analysis(fp, p)
+            added.append(p)
+        if on_progress:
+            on_progress(len(new), len(new), len(added), len(dupes))
+        return {"unindexed": len(new), "added": added, "dupes": dupes,
+                "failed": failed, "applied": apply}

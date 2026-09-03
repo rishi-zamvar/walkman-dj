@@ -13,7 +13,7 @@ import os, sys, argparse, subprocess, tempfile, glob
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from walkman_dj import crate
 
-ROOT = os.environ.get("CRATE_ROOT", os.path.expanduser("~/Documents/MusicLake"))
+ROOT = os.environ.get("CRATE_ROOT", os.path.expanduser("~/Music/MusicLake"))
 DB = os.environ.get("CRATE_DB", os.path.join(os.path.dirname(__file__), "..", "..", "data", "library.db"))
 
 
@@ -99,7 +99,7 @@ def cmd_export(args):
 
 
 def cmd_enrich(args):
-    adb = args.analysis or os.path.join(os.path.dirname(DB), "walkman_analysis.db")
+    adb = args.analysis or os.path.join(os.path.dirname(DB), "archive_walkman_analysis.db")
     print("enriched", _lib().enrich_from_analysis(adb), "recordings from", os.path.basename(adb))
 
 
@@ -144,6 +144,41 @@ def cmd_stats(args):
 
 def cmd_verify(args):
     print(_lib().verify())
+
+
+def _bar(tag):
+    def prog(i, n, a, b):
+        pct = round(i / n * 100) if n else 100
+        print(f"\r[{tag}] {i}/{n} ({pct}%)  {a} / {b}", end="", flush=True)
+    return prog
+
+
+def cmd_prune(args):
+    r = _lib().prune(apply=args.apply, on_progress=_bar("prune"))
+    print(f"\n{r['recordings']} rows, {r['missing']} pointing at nothing:")
+    for old_p, new_p in r["relinked"]:
+        print(f"  RELINK  {os.path.relpath(old_p, ROOT)}\n       -> {os.path.relpath(new_p, ROOT)}")
+    for p in r["deleted"]:
+        print(f"  DELETE  {os.path.relpath(p, ROOT)}")
+    for grp in r["collisions"]:
+        print("  COLLIDE (no row matches the file — resolve by hand):")
+        for p in grp:
+            print(f"            {os.path.relpath(p, ROOT)}")
+    print(f"{len(r['relinked'])} relinked, {len(r['deleted'])} deleted"
+          f"{'' if r['applied'] else '  (DRY RUN — rerun with --apply)'}")
+
+
+def cmd_rescan(args):
+    r = _lib().rescan(apply=args.apply, on_progress=_bar("rescan"))
+    print(f"\n{r['unindexed']} files on disk but not indexed:")
+    for p in r["added"]:
+        print(f"  ADD   {os.path.relpath(p, ROOT)}")
+    for p, keeper in r["dupes"]:
+        print(f"  DUPE  {os.path.relpath(p, ROOT)}  == {os.path.relpath(keeper, ROOT)}")
+    for p in r["failed"]:
+        print(f"  FAIL  {os.path.relpath(p, ROOT)}  (no fingerprint)")
+    print(f"{len(r['added'])} indexed, {len(r['dupes'])} dupes left in place, {len(r['failed'])} failed"
+          f"{'' if r['applied'] else '  (DRY RUN — rerun with --apply)'}")
 
 
 def cmd_backfill(args):
@@ -455,7 +490,7 @@ def cmd_analyze(args):
 def cmd_migrate_analysis(args):
     from walkman_dj import schema
     schema.ensure_schema(DB)
-    ana = args.analysis or os.path.join(os.path.dirname(DB), "walkman_analysis.db")
+    ana = args.analysis or os.path.join(os.path.dirname(DB), "archive_walkman_analysis.db")
     print("migrated MIR for", schema.migrate_analysis(DB, ana), "recordings from", os.path.basename(ana))
 
 
@@ -479,6 +514,8 @@ def build_parser():
     pd = sub.add_parser("dedupe"); pd.add_argument("--log", help="write KEEP/TRASH audit log here"); pd.set_defaults(func=cmd_dedupe)
     sub.add_parser("stats").set_defaults(func=cmd_stats)
     sub.add_parser("verify").set_defaults(func=cmd_verify)
+    pp = sub.add_parser("prune"); pp.add_argument("--apply", action="store_true"); pp.set_defaults(func=cmd_prune)
+    prs = sub.add_parser("rescan"); prs.add_argument("--apply", action="store_true"); prs.set_defaults(func=cmd_rescan)
     pmig = sub.add_parser("migrate-analysis"); pmig.add_argument("--analysis"); pmig.set_defaults(func=cmd_migrate_analysis)
     pan = sub.add_parser("analyze"); pan.add_argument("file"); pan.set_defaults(func=cmd_analyze)
     psm = sub.add_parser("spotify-match"); psm.add_argument("query"); psm.set_defaults(func=cmd_spotify_match)

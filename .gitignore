@@ -21,3 +21,4 @@ REPORT.md
 .git.nosync/
 data/*.bak
 data/*.corrupt*
+data/*.db.*

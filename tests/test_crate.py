@@ -7,7 +7,7 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from walkman_dj import crate  # noqa: E402
 
-LAKE = os.path.expanduser("~/Documents/MusicLake")
+LAKE = os.environ.get("CRATE_ROOT", os.path.expanduser("~/Music/MusicLake"))
 
 
 def _two_distinct_tracks():

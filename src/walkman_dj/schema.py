@@ -56,6 +56,12 @@ def ensure_schema(db: str):
             attempts INTEGER DEFAULT 0)""")
         c.execute("""CREATE TABLE IF NOT EXISTS segments(
             fingerprint TEXT, idx INTEGER, label TEXT, start REAL, end REAL)""")
+        # side tables keyed off recordings — declared here so prune() can cascade and a
+        # fresh DB matches production (these used to be created ad hoc by their writers)
+        c.execute("CREATE TABLE IF NOT EXISTS ml_features(id INTEGER PRIMARY KEY, vec TEXT)")
+        c.execute("""CREATE TABLE IF NOT EXISTS track_tags(
+            id INTEGER, source TEXT, tag TEXT, weight REAL, PRIMARY KEY(id, source, tag))""")
+        c.execute("CREATE TABLE IF NOT EXISTS cue_in(path TEXT PRIMARY KEY, cue REAL, conf REAL)")
 
 
 def enqueue(db: str, fp: str, path: str):

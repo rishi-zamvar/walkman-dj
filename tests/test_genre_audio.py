@@ -4,7 +4,7 @@ from walkman_dj import genre_audio as ga
 
 
 def _a_flac():
-    for dp, _, fns in os.walk(os.path.expanduser("~/Documents/MusicLake")):
+    for dp, _, fns in os.walk(os.environ.get("CRATE_ROOT", os.path.expanduser("~/Music/MusicLake"))):
         if "_dedup" in dp:
             continue
         for f in fns:
