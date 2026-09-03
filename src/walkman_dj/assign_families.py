@@ -6,7 +6,7 @@ import os
 from walkman_dj import genre, family, rules as rulesmod
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DB = os.path.join(ROOT, "data", "walkman_analysis.db")
+DB = os.path.join(ROOT, "data", "archive_walkman_analysis.db")
 DEFAULT_RULES = os.path.join(ROOT, "config", "genre_rules.toml")
 
 

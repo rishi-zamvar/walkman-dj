@@ -23,7 +23,7 @@ from walkman_dj.report import build_report
 from walkman_dj.notify import ping
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DEFAULT_DB = os.path.join(ROOT, "data", "walkman_analysis.db")
+DEFAULT_DB = os.path.join(ROOT, "data", "archive_walkman_analysis.db")
 DEFAULT_CFG = os.path.join(ROOT, "config", "genre_rules.toml")
 DEFAULT_TMP = os.path.join(ROOT, "audio_tmp")
 DEFAULT_PLDIR = os.path.join(ROOT, "data", "playlists")

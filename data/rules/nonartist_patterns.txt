@@ -1,0 +1,17 @@
+\.(com|mobi|org|net|info)\b
+^user\s*\d+$
+\brecords?\.$
+\brecordings?$
+\bmusic$
+\bofficial$
+\bvevo$
+\btv$
+\bworld$
+\bmix(?:es|tape)?$
+pagalworld
+hiphopearly
+djpunjab
+\bsongs?$
+\bedits?$
+\bremixes?$
+\bblog$

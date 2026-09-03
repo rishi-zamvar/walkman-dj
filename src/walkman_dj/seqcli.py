@@ -6,7 +6,7 @@ from walkman_dj.sequence import order_family
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DEFAULT_CFG = os.path.join(ROOT, "config", "sequencer.toml")
-DEFAULT_DB = os.path.join(ROOT, "data", "walkman_analysis.db")
+DEFAULT_DB = os.path.join(ROOT, "data", "archive_walkman_analysis.db")
 
 
 def load_cfg(path=DEFAULT_CFG):
