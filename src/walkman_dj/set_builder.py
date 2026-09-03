@@ -14,7 +14,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from walkman_dj.camelot import camelot_edge_ok
 
 DB = os.path.expanduser("~/Documents/Projects/walkman-dj/data/library.db")
-BLUE = json.load(open("/tmp/playlist_blueprint.json"))
+BLUEPRINT = os.environ.get("PLAYLIST_BLUEPRINT", "/tmp/playlist_blueprint.json")
+
+
+def blueprint():
+    """Set definitions, loaded on demand. Was a module-level json.load, which made the
+    whole module unimportable once the file aged out of /tmp."""
+    with open(BLUEPRINT) as f:
+        return json.load(f)
 
 # discriminative distance features + default weights (seeded from CV separation power)
 FEATS = ["sub_bass", "low_mid", "air", "perc_frac", "onset_rate",
@@ -327,7 +334,7 @@ def wdist_c(a, b, w):
 def run(cfg, tracks):
     def _pass(c):
         out = {}
-        for sd in BLUE:
+        for sd in blueprint():
             b = build_set(sd, tracks, c)
             if b:
                 out[sd["id"]] = b

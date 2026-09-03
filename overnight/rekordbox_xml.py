@@ -57,32 +57,45 @@ def location(path):
 
 
 SETS_JSON = os.path.expanduser("~/Desktop/DJ Sets/sets.json")
+GENRES_JSON = os.path.expanduser("~/Desktop/DJ Sets/genres.json")
 
 
 def main():
     os.makedirs(OUT_DIR, exist_ok=True)
     # sets.json = [{name, ids}] written by dj_sets — exact track identity, NO filename remap.
-    sets = json.load(open(SETS_JSON))
+    # two playlist folders: the massive per-genre digs, and the sequenced DJ sets
+    groups = []
+    for label, path in (("Genres", GENRES_JSON), ("Walkman DJ Sets", SETS_JSON)):
+        if os.path.exists(path):
+            groups.append((label, json.load(open(path))))
+        else:
+            print(f"skipping '{label}' — {os.path.basename(path)} not built yet")
+    if not groups:
+        sys.exit("nothing to export: build genres.json and/or sets.json first")
     con = sqlite3.connect(DB); con.row_factory = sqlite3.Row
     meta = {r["id"]: dict(r) for r in con.execute(
         "SELECT id,canonical_path,artist,title,genre,bpm,camelot,duration FROM recordings")}
 
-    playlists = []          # (name, [TrackID])
-    track_ids = {}          # library id -> TrackID (1-based)
+    folders = []            # (folder name, [(playlist name, [TrackID])])
+    track_ids = {}          # library id -> TrackID (1-based), shared across BOTH folders
     collection = []
     misses = 0
-    for s in sets:
-        ids = []
-        for lid in s["ids"]:
-            row = meta.get(lid)
-            if not row or not row["canonical_path"] or not os.path.exists(row["canonical_path"]):
-                misses += 1; continue
-            if lid not in track_ids:
-                track_ids[lid] = len(collection) + 1
-                collection.append(row)
-            ids.append(track_ids[lid])
-        if ids:
-            playlists.append((s["name"], ids))
+    for label, sets in groups:
+        playlists = []
+        for s in sets:
+            ids = []
+            for lid in s["ids"]:
+                row = meta.get(lid)
+                if not row or not row["canonical_path"] or not os.path.exists(row["canonical_path"]):
+                    misses += 1; continue
+                if lid not in track_ids:
+                    track_ids[lid] = len(collection) + 1
+                    collection.append(row)
+                ids.append(track_ids[lid])
+            if ids:
+                playlists.append((s["name"], ids))
+        if playlists:
+            folders.append((label, playlists))
 
     # build XML
     out = ['<?xml version="1.0" encoding="UTF-8"?>',
@@ -103,19 +116,22 @@ def main():
         out.append("    <TRACK " + " ".join(f'{k}={quoteattr(v)}' for k, v in attrs.items()) + "/>")
     out.append("  </COLLECTION>")
     out.append("  <PLAYLISTS>")
-    out.append(f'    <NODE Type="0" Name="ROOT" Count="1">')
-    out.append(f'      <NODE Type="0" Name="Walkman DJ Sets" Count="{len(playlists)}">')
-    for name, ids in playlists:
-        out.append(f'        <NODE Name={quoteattr(name)} Type="1" KeyType="0" Entries="{len(ids)}">')
-        for tid in ids:
-            out.append(f'          <TRACK Key="{tid}"/>')
-        out.append("        </NODE>")
-    out.append("      </NODE>")
+    out.append(f'    <NODE Type="0" Name="ROOT" Count="{len(folders)}">')
+    for label, playlists in folders:
+        out.append(f'      <NODE Type="0" Name={quoteattr(label)} Count="{len(playlists)}">')
+        for name, ids in playlists:
+            out.append(f'        <NODE Name={quoteattr(name)} Type="1" KeyType="0" Entries="{len(ids)}">')
+            for tid in ids:
+                out.append(f'          <TRACK Key="{tid}"/>')
+            out.append("        </NODE>")
+        out.append("      </NODE>")
     out.append("    </NODE>")
     out.append("  </PLAYLISTS>")
     out.append("</DJ_PLAYLISTS>")
     open(OUT, "w", encoding="utf-8").write("\n".join(out) + "\n")
-    print(f"{len(playlists)} playlists · {len(collection)} unique tracks · {misses} unmatched refs")
+    for label, playlists in folders:
+        print(f"  {label}: {len(playlists)} playlists · {sum(len(i) for _, i in playlists)} entries")
+    print(f"{len(collection)} unique tracks · {misses} unmatched refs")
     print(f"-> {OUT}")
 
 

@@ -271,7 +271,8 @@ def build(target=50, min_genre=60, dry=False, only_genre=None, min_set=40, max_s
         "SELECT id,canonical_path,artist,title,duration,bpm,camelot,energy,valence,genre,"
         "subgenre,key_confidence,bpm_confidence,brightness,bass_weight,mir_danceability "
         "FROM recordings WHERE TRIM(COALESCE(genre,''))<>'' AND genre NOT IN ('Other','Alternative') "
-        "AND bpm IS NOT NULL AND camelot IS NOT NULL AND canonical_path IS NOT NULL")]
+        "AND bpm IS NOT NULL AND camelot IS NOT NULL AND canonical_path IS NOT NULL "
+        "AND COALESCE(blacklisted,0)=0")]
     for r in rows:
         r["fingerprint"] = str(r["id"])
     by_genre = {}
