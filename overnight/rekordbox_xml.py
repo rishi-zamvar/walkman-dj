@@ -65,7 +65,7 @@ def main():
     # sets.json = [{name, ids}] written by dj_sets — exact track identity, NO filename remap.
     # two playlist folders: the massive per-genre digs, and the sequenced DJ sets
     groups = []
-    for label, path in (("Genres", GENRES_JSON), ("Walkman DJ Sets", SETS_JSON)):
+    for label, path in (("Genres", GENRES_JSON), ("Sets", SETS_JSON)):
         if os.path.exists(path):
             groups.append((label, json.load(open(path))))
         else:
